@@ -140,58 +140,11 @@ public class MMCPackParser {
                 arch += "32";
             }
         }
-        return "natives-" + os + "-" + arch;
+        String suffix = "natives-" + os;
+        if (!arch.isEmpty()) {
+            suffix += "-" + arch;
+        }
+        return suffix;
     }
 
-    private static void handleLwjglRules(Map<String, String> in) {
-        Set<String> toRemove = new HashSet<>();
-        for (Map.Entry<String, String> entry: in.entrySet()) {
-            if (!entry.getKey().contains("org/lwjgl")) continue;
-            String[] a  = entry.getKey().split("/");
-            String fileName = a[a.length - 1];
-            String suffix = fileName.substring(fileName.indexOf("natives") + 8).replace(".jar", "");
-            String os, arch;
-            if (suffix.contains("-")) {
-                os = suffix.split("-")[0];
-                arch = suffix.split("-")[1];
-            } else {
-                os = suffix;
-                arch = "";
-            }
-            if (SystemUtils.IS_OS_LINUX) {
-                if (!os.equals("linux")) {
-                    toRemove.add(entry.getKey());
-                } else {
-                    if (System.getProperty("os.arch").equals("x86_64")) {
-                        if (!arch.isEmpty()) {
-                            toRemove.add(entry.getKey());
-                        }
-                    }
-                }
-            } else if (SystemUtils.IS_OS_MAC) {
-                if (!os.equals("macos")) {
-                    toRemove.add(entry.getKey());
-                } else {
-                    if (System.getProperty("os.arch").equals("x86_64")) {
-                        if (!arch.isEmpty()) {
-                            toRemove.add(entry.getKey());
-                        }
-                    }
-                }
-            } else if (SystemUtils.IS_OS_WINDOWS) {
-                if (!os.equals("windows")) {
-                    toRemove.add(entry.getKey());
-                } else {
-                    if (System.getProperty("os.arch").equals("x86_64")) {
-                        if (!arch.isEmpty()) {
-                            toRemove.add(entry.getKey());
-                        }
-                    }
-                }
-            }
-        }
-        for (String key: toRemove) {
-            in.remove(key);
-        }
-    }
 }
