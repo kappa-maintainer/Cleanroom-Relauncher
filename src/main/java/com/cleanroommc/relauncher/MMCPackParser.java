@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.*;
 import java.net.URL;
@@ -31,20 +32,17 @@ public class MMCPackParser {
             JsonObject vanilla = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(vanillaJson.toPath()))).getAsJsonObject();
             JsonObject modded = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(moddedJson.toPath()))).getAsJsonObject();
             JsonObject lwjgl = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(lwjglJson.toPath()))).getAsJsonObject();
-            Map<String, String> result = new HashMap<>();
-            parseAndAddLibraries(vanilla, result);
-            handleVanillaRules(result);
-            parseAndAddLibraries(modded, result);
-            parseAndAddLibraries(lwjgl, result);
-            handleLwjglRules(result);
+            List<Pair<String, String>> result = new ArrayList<>(parseAndAddVanillaLibraries(vanilla));
+            result.addAll(parseAndAddModdedLibraries(modded));
+            result.addAll(parseAndAddLwjglLibraries(lwjgl));
 
             StringBuilder builder = new StringBuilder();
-            for (Map.Entry<String, String> entry : result.entrySet()){
+            for (Pair<String, String> entry : result){
                 String[] a = entry.getKey().split("/");
                 String fileName = a[a.length - 1];
                 File libFile = new File(Relauncher.workingDir, fileName);
                 Relauncher.LOGGER.info("Downloading : {}", libFile.getName());
-                Downloader.downloadUntilSucceed(new URL(entry.getKey()), entry.getValue(), libFile);
+                Downloader.downloadUntilSucceed(new URL(entry.getLeft()), entry.getRight(), libFile);
                 builder.append(libFile.getAbsolutePath()).append(":");
             }
 
@@ -56,43 +54,99 @@ public class MMCPackParser {
         }
     }
 
-    private static void parseAndAddLibraries(JsonObject o, Map<String, String> in) {
+    private static List<Pair<String, String>> parseAndAddModdedLibraries(JsonObject o) {
+        List<Pair<String, String>> result = new ArrayList<>();
         o.getAsJsonArray("libraries").forEach(jsonElement -> {
             JsonObject libraries = jsonElement.getAsJsonObject();
             if (libraries != null) {
                 JsonElement downloads = libraries.getAsJsonObject().get("downloads");
                 if (downloads != null) {
                     JsonObject artifact = downloads.getAsJsonObject().get("artifact").getAsJsonObject();
-                    in.put(artifact.get("url").getAsString(), artifact.get("sha1").getAsString());
+                    result.add(Pair.of(artifact.get("url").getAsString(), artifact.get("sha1").getAsString()));
                 }
             }
         });
+        return result;
     }
 
-    private static void handleVanillaRules(Map<String, String> in) {
-        Set<String> toRemove = new HashSet<>();
-        for (Map.Entry<String, String> entry: in.entrySet()) {
-            String[] a = entry.getKey().split("/");
-            if (a[a.length - 1].startsWith("java-objc-bridge")) {
-                toRemove.add(entry.getKey());
+    private static List<Pair<String, String>> parseAndAddVanillaLibraries(JsonObject o) {
+        List<Pair<String, String>> result = new ArrayList<>();
+        o.getAsJsonArray("libraries").forEach(jsonElement -> {
+            JsonObject libraries = jsonElement.getAsJsonObject();
+            if (libraries != null) {
+                JsonElement downloads = libraries.getAsJsonObject().get("downloads");
+                JsonElement name = libraries.getAsJsonObject().get("name");
+                if (downloads != null) {
+                    if (name != null && !name.getAsString().startsWith("ca.weblite")) {
+                        JsonObject artifact = downloads.getAsJsonObject().get("artifact").getAsJsonObject();
+                        result.add(Pair.of(artifact.get("url").getAsString(), artifact.get("sha1").getAsString()));
+                        if (name.getAsString().startsWith("com.mojang:text2speech")) {
+                            JsonElement classifiers = downloads.getAsJsonObject().get("classifiers");
+                            if (classifiers != null) {
+                                if ((SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_FREE_BSD) && System.getProperty("os.arch").equals("x86_64")) {
+                                    JsonElement linux = classifiers.getAsJsonObject().get("natives-linux");
+                                    result.add(Pair.of(linux.getAsJsonObject().get("url").getAsString(), linux.getAsJsonObject().get("sha1").getAsString()));
+                                    return;
+                                }
+                                if (SystemUtils.IS_OS_WINDOWS) {
+                                    JsonElement linux = classifiers.getAsJsonObject().get("natives-windows");
+                                    result.add(Pair.of(linux.getAsJsonObject().get("url").getAsString(), linux.getAsJsonObject().get("sha1").getAsString()));
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        }
-        for (String key: toRemove) {
-            in.remove(key);
-        }
+        });
+        return result;
+    }
+
+    private static List<Pair<String, String>> parseAndAddLwjglLibraries(JsonObject o) {
+        List<Pair<String, String>> result = new ArrayList<>();
+        String suffix = getLwjglSuffix();
+        o.getAsJsonArray("libraries").forEach(jsonElement -> {
+            JsonObject libraries = jsonElement.getAsJsonObject();
+            if (libraries != null) {
+                JsonElement downloads = libraries.getAsJsonObject().get("downloads");
+                JsonElement name = libraries.getAsJsonObject().get("name");
+                if (downloads != null) {
+                    if (name.getAsString().split(":").length == 4 && !name.getAsString().endsWith(suffix)) return;
+                    JsonObject artifact = downloads.getAsJsonObject().get("artifact").getAsJsonObject();
+                    result.add(Pair.of(artifact.get("url").getAsString(), artifact.get("sha1").getAsString()));
+                }
+            }
+        });
+        return result;
+    }
+
+    private static String getLwjglSuffix() {
+        String os = "";
+        String arch = "";
         if (SystemUtils.IS_OS_WINDOWS) {
-            in.put("https://libraries.minecraft.net/com/mojang/text2speech/1.10.3/text2speech-1.10.3-natives-windows.jar", "84a4b856389cc4f485275b1f63497a95a857a443");
+            os = "windows";
+            if (System.getProperty("os.arch").contains("64")) {
+                arch = "x86";
+            }
         } else if (SystemUtils.IS_OS_LINUX) {
-            if (System.getProperty("os.arch").equals("x86_64")) {
-                in.put("https://libraries.minecraft.net/com/mojang/text2speech/1.10.3/text2speech-1.10.3-natives-linux.jar", "ab7896aec3b3dd272b06194357f2d98f832c0cfc");
+            os = "linux";
+        } else if (SystemUtils.IS_OS_MAC) {
+            os = "macos";
+        }
+        if (System.getProperty("os.arch").toLowerCase().contains("arm")) {
+            arch = "arm";
+            if (System.getProperty("os.arch").contains("64")) {
+                arch += "64";
+            } else {
+                arch += "32";
             }
         }
+        return "natives-" + os + "-" + arch;
     }
 
     private static void handleLwjglRules(Map<String, String> in) {
         Set<String> toRemove = new HashSet<>();
         for (Map.Entry<String, String> entry: in.entrySet()) {
-            if (!entry.getKey().contains("org.lwjgl")) continue;
+            if (!entry.getKey().contains("org/lwjgl")) continue;
             String[] a  = entry.getKey().split("/");
             String fileName = a[a.length - 1];
             String suffix = fileName.substring(fileName.indexOf("natives") + 8).replace(".jar", "");
