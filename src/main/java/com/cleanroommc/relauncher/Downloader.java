@@ -11,34 +11,58 @@ import java.nio.file.Files;
 
 public class Downloader {
     static {
-        if (!Config.proxy.startsWith("http") && !Config.proxy.startsWith("socks")) {
-            throw new RuntimeException("Invalid proxy config!");
-        }
-        String[] temp = Config.proxy.split(":");
-        String addr = temp[1].substring(2);
-        String port = temp[2];
-        if (Config.proxy.startsWith("http")) {
-            System.setProperty("https.proxyHost", addr);
-            System.setProperty("https.proxyPort", port);
-        } else {
-            System.setProperty("socksProxyHost", addr);
-            System.setProperty("socksProxyPort", port);
+        if (!Config.proxy.isEmpty()) {
+            if (!Config.proxy.startsWith("http") && !Config.proxy.startsWith("socks")) {
+                throw new RuntimeException("Invalid proxy config!");
+            }
+            String[] temp = Config.proxy.split(":");
+            String addr = temp[1].substring(2);
+            String port = temp[2];
+            if (Config.proxy.startsWith("http")) {
+                System.setProperty("https.proxyHost", addr);
+                System.setProperty("https.proxyPort", port);
+            } else {
+                System.setProperty("socksProxyHost", addr);
+                System.setProperty("socksProxyPort", port);
+            }
         }
     }
     public static void downloadUntilSucceed(URL url, String sha1, File destination) {
         boolean succeed = false;
-        while (!succeed){
-            try {
-                FileUtils.copyURLToFile(url, destination);
-                if (!Strings.isNullOrEmpty(sha1)) {
-                    String result = DigestUtils.sha1Hex(Files.newInputStream(destination.toPath()));
-                    if (result.equals(sha1)) {
+        if (!destination.exists()) {
+            while (!succeed) {
+                try {
+                    FileUtils.copyURLToFile(url, destination);
+                    if (!Strings.isNullOrEmpty(sha1)) {
+                        String result = DigestUtils.sha1Hex(Files.newInputStream(destination.toPath()));
+                        if (result.equals(sha1)) {
+                            succeed = true;
+                        }
+                    } else {
                         succeed = true;
                     }
-                } else {
-                    succeed = true;
+                } catch (IOException ignored) {
                 }
-            } catch (IOException ignored) {
+            }
+        } else {
+            if (!Strings.isNullOrEmpty(sha1)) {
+                try {
+                    String result = DigestUtils.sha1Hex(Files.newInputStream(destination.toPath()));
+                    if (!result.equals(sha1)) {
+                        while (!succeed) {
+                                FileUtils.copyURLToFile(url, destination);
+                                if (!Strings.isNullOrEmpty(sha1)) {
+                                    result = DigestUtils.sha1Hex(Files.newInputStream(destination.toPath()));
+                                    if (result.equals(sha1)) {
+                                        succeed = true;
+                                    }
+                                } else {
+                                    succeed = true;
+                                }
+
+                        }
+                    }
+                } catch (IOException ignored) {}
             }
         }
 

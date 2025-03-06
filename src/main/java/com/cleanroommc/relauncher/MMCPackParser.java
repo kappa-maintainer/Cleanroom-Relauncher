@@ -1,5 +1,6 @@
 package com.cleanroommc.relauncher;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.io.IOUtils;
@@ -8,16 +9,13 @@ import org.apache.commons.lang3.SystemUtils;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
-import java.util.Enumeration;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
 
-public class MMCPackSetup {
+public class MMCPackParser {
     public static String cp;
-    public static void downloadAndParse() {
-        String version = VersionParser.getVersion();
+    public static void parseMMCPack() {
+        String version = CleanroomVersionParser.getVersion();
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
         File universal = new File(new File(mmcDir, "libraries"), "cleanroom-" + version + "-universal.jar");
         File patches = new File(mmcDir, "patches");
@@ -25,36 +23,15 @@ public class MMCPackSetup {
         File moddedJson = new File(patches, "net.minecraftforge.json");
         File lwjglJson = new File(patches, "org.lwjgl3.json");
         mmcDir.mkdir();
-        File pack = new File(mmcDir, "mmcpack.zip");
         try {
-            Downloader.downloadUntilSucceed(new URL("https://github.com/CleanroomMC/Cleanroom/releases/download/" + version + "/Cleanroom-MMC-instance-" + version + ".zip"), "", pack);
-            try (ZipFile zipFile = new ZipFile(pack)) {
-                Enumeration<? extends ZipEntry> entries = zipFile.entries();
-                while (entries.hasMoreElements()) {
-                    ZipEntry entry = entries.nextElement();
-                    if (entry.getName().equals(".packignore") || entry.getName().equals("instance.cfg")) {
-                        continue;
-                    }
-                    File entryDestination = new File(mmcDir,  entry.getName());
-                    if (entry.isDirectory()) {
-                        entryDestination.mkdirs();
-                    } else {
-                        entryDestination.getParentFile().mkdirs();
-                        try (InputStream in = zipFile.getInputStream(entry);
-                             OutputStream out = Files.newOutputStream(entryDestination.toPath())) {
-                            IOUtils.copy(in, out);
-                        }
-                    }
-                }
-            }
             File universalTarget = new File(Relauncher.workingDir, universal.getName());
-            Files.move(universal.toPath(), universalTarget.toPath());
-            cp = universalTarget.getAbsolutePath();
+            Files.copy(universal.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            cp = universalTarget.getAbsolutePath() + ":";
 
             JsonObject vanilla = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(vanillaJson.toPath()))).getAsJsonObject();
             JsonObject modded = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(moddedJson.toPath()))).getAsJsonObject();
             JsonObject lwjgl = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(lwjglJson.toPath()))).getAsJsonObject();
-            Map<String, String> result = new TreeMap<>();
+            Map<String, String> result = new HashMap<>();
             parseAndAddLibraries(vanilla, result);
             handleVanillaRules(result);
             parseAndAddLibraries(modded, result);
@@ -66,8 +43,9 @@ public class MMCPackSetup {
                 String[] a = entry.getKey().split("/");
                 String fileName = a[a.length - 1];
                 File libFile = new File(Relauncher.workingDir, fileName);
+                Relauncher.LOGGER.info("Downloading : {}", libFile.getName());
                 Downloader.downloadUntilSucceed(new URL(entry.getKey()), entry.getValue(), libFile);
-                builder.append(libFile.getAbsolutePath()).append(";");
+                builder.append(libFile.getAbsolutePath()).append(":");
             }
 
             cp += builder.deleteCharAt(builder.length() - 1).toString();
@@ -80,17 +58,27 @@ public class MMCPackSetup {
 
     private static void parseAndAddLibraries(JsonObject o, Map<String, String> in) {
         o.getAsJsonArray("libraries").forEach(jsonElement -> {
-            JsonObject artifact = jsonElement.getAsJsonObject().get("downloads").getAsJsonObject().get("artifact").getAsJsonObject();
-            in.put(artifact.get("url").getAsString(), artifact.get("sha1").getAsString());
+            JsonObject libraries = jsonElement.getAsJsonObject();
+            if (libraries != null) {
+                JsonElement downloads = libraries.getAsJsonObject().get("downloads");
+                if (downloads != null) {
+                    JsonObject artifact = downloads.getAsJsonObject().get("artifact").getAsJsonObject();
+                    in.put(artifact.get("url").getAsString(), artifact.get("sha1").getAsString());
+                }
+            }
         });
     }
 
     private static void handleVanillaRules(Map<String, String> in) {
+        Set<String> toRemove = new HashSet<>();
         for (Map.Entry<String, String> entry: in.entrySet()) {
             String[] a = entry.getKey().split("/");
             if (a[a.length - 1].startsWith("java-objc-bridge")) {
-                in.remove(entry.getKey());
+                toRemove.add(entry.getKey());
             }
+        }
+        for (String key: toRemove) {
+            in.remove(key);
         }
         if (SystemUtils.IS_OS_WINDOWS) {
             in.put("https://libraries.minecraft.net/com/mojang/text2speech/1.10.3/text2speech-1.10.3-natives-windows.jar", "84a4b856389cc4f485275b1f63497a95a857a443");
@@ -102,7 +90,9 @@ public class MMCPackSetup {
     }
 
     private static void handleLwjglRules(Map<String, String> in) {
+        Set<String> toRemove = new HashSet<>();
         for (Map.Entry<String, String> entry: in.entrySet()) {
+            if (!entry.getKey().contains("org.lwjgl")) continue;
             String[] a  = entry.getKey().split("/");
             String fileName = a[a.length - 1];
             String suffix = fileName.substring(fileName.indexOf("natives") + 8).replace(".jar", "");
@@ -116,35 +106,38 @@ public class MMCPackSetup {
             }
             if (SystemUtils.IS_OS_LINUX) {
                 if (!os.equals("linux")) {
-                    in.remove(entry.getKey());
+                    toRemove.add(entry.getKey());
                 } else {
                     if (System.getProperty("os.arch").equals("x86_64")) {
                         if (!arch.isEmpty()) {
-                            in.remove(entry.getKey());
+                            toRemove.add(entry.getKey());
                         }
                     }
                 }
             } else if (SystemUtils.IS_OS_MAC) {
                 if (!os.equals("macos")) {
-                    in.remove(entry.getKey());
+                    toRemove.add(entry.getKey());
                 } else {
                     if (System.getProperty("os.arch").equals("x86_64")) {
                         if (!arch.isEmpty()) {
-                            in.remove(entry.getKey());
+                            toRemove.add(entry.getKey());
                         }
                     }
                 }
             } else if (SystemUtils.IS_OS_WINDOWS) {
                 if (!os.equals("windows")) {
-                    in.remove(entry.getKey());
+                    toRemove.add(entry.getKey());
                 } else {
                     if (System.getProperty("os.arch").equals("x86_64")) {
                         if (!arch.isEmpty()) {
-                            in.remove(entry.getKey());
+                            toRemove.add(entry.getKey());
                         }
                     }
                 }
             }
+        }
+        for (String key: toRemove) {
+            in.remove(key);
         }
     }
 }

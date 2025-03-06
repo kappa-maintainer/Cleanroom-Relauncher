@@ -3,12 +3,15 @@ package com.cleanroommc.relauncher;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 
-public class VersionParser {
+public class CleanroomVersionParser {
+    private static String version = "";
     public static String getVersion() {
+        if (!CleanroomVersionParser.version.isEmpty()) {
+            return CleanroomVersionParser.version;
+        }
         File metadata = new File(Relauncher.workingDir, "maven-metadata.xml");
         String version = "0.3.0-alpha";
         try{
@@ -25,6 +28,7 @@ public class VersionParser {
             }
             reader.close();
         }catch (IOException ignored) {}
+        CleanroomVersionParser.version = version;
         return version;
     }
 }
