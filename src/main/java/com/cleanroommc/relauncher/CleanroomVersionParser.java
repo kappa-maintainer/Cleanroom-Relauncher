@@ -12,12 +12,12 @@ public class CleanroomVersionParser {
         if (!CleanroomVersionParser.version.isEmpty()) {
             return CleanroomVersionParser.version;
         }
+        Relauncher.LOGGER.info("Parsing latest Cleanroom versions");
         File metadata = new File(Relauncher.workingDir, "maven-metadata.xml");
         String version = "0.3.0-alpha";
         try{
+            Relauncher.LOGGER.info("Downloading metadata");
             Downloader.downloadUntilSucceed(new URL("https://maven.outlands.top/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), "", metadata);
-
-
             BufferedReader reader = Files.newBufferedReader(metadata.toPath());
             while (reader.ready()) {
                 String line = reader.readLine();;

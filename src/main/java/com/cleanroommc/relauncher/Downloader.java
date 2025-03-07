@@ -37,6 +37,7 @@ public class Downloader {
                         String result = DigestUtils.sha1Hex(Files.newInputStream(destination.toPath()));
                         if (result.equals(sha1)) {
                             succeed = true;
+                            Relauncher.LOGGER.info("Downloaded and verified file: {}", destination.getName());
                         }
                     } else {
                         succeed = true;
@@ -55,6 +56,7 @@ public class Downloader {
                                     result = DigestUtils.sha1Hex(Files.newInputStream(destination.toPath()));
                                     if (result.equals(sha1)) {
                                         succeed = true;
+                                        Relauncher.LOGGER.info("Found and verified cached file: {}", destination.getName());
                                     }
                                 } else {
                                     succeed = true;

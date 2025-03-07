@@ -41,7 +41,7 @@ public class MMCPackParser {
                 String[] a = entry.getKey().split("/");
                 String fileName = a[a.length - 1];
                 File libFile = new File(Relauncher.workingDir, fileName);
-                Relauncher.LOGGER.info("Downloading : {}", libFile.getName());
+                Relauncher.LOGGER.info("Grabbing : {}", libFile.getName());
                 Downloader.downloadUntilSucceed(new URL(entry.getLeft()), entry.getRight(), libFile);
                 builder.append(libFile.getAbsolutePath()).append(":");
             }

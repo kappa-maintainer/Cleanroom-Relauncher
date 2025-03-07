@@ -24,11 +24,13 @@ public class MMCPackDownloader {
         try {
             if (!pack.exists()) {
                 if (!Config.useLocalPack) {
+                    Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                     Downloader.downloadUntilSucceed(new URL("https://github.com/CleanroomMC/Cleanroom/releases/download/" + version + "/Cleanroom-MMC-instance-" + version + ".zip"), "", pack);
                 } else {
                     if (Relauncher.workingDir.listFiles() != null) {
                         Optional<File> packfile = Arrays.stream(Relauncher.workingDir.listFiles()).filter(file -> file.getName().startsWith("Cleanroom-MMC-instance-") && file.getName().endsWith(".zip")).findFirst();
                         if (packfile.isPresent()) {
+                            Relauncher.LOGGER.info("Found local pack {}", packfile.get());
                             Files.copy(packfile.get().toPath(), pack.toPath());
                         } else {
                             throw new RuntimeException("Configured to use local mmc pack but can't find matched target");
@@ -38,6 +40,7 @@ public class MMCPackDownloader {
                     }
                 }
             }
+            Relauncher.LOGGER.info("Extracting MMC pack");
             try (ZipFile zipFile = new ZipFile(pack)) {
                 Enumeration<? extends ZipEntry> entries = zipFile.entries();
                 while (entries.hasMoreElements()) {
