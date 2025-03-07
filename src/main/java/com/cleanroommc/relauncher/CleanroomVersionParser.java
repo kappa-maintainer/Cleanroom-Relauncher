@@ -17,7 +17,7 @@ public class CleanroomVersionParser {
         String version = "0.3.0-alpha";
         try{
             Relauncher.LOGGER.info("Downloading metadata");
-            Downloader.downloadUntilSucceed(new URL("https://maven.outlands.top/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), "", metadata);
+            Downloader.downloadUntilSucceed(new URL("https://maven.arcseekers.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), "", metadata);
             BufferedReader reader = Files.newBufferedReader(metadata.toPath());
             while (reader.ready()) {
                 String line = reader.readLine();;

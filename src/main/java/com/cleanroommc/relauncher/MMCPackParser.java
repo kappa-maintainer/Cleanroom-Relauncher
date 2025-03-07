@@ -27,7 +27,7 @@ public class MMCPackParser {
         try {
             File universalTarget = new File(Relauncher.workingDir, universal.getName());
             Files.copy(universal.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            cp = universalTarget.getAbsolutePath() + ":";
+            cp = universalTarget.getAbsolutePath() + ArgumentGetter.cpSplitter;
 
             JsonObject vanilla = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(vanillaJson.toPath()))).getAsJsonObject();
             JsonObject modded = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(moddedJson.toPath()))).getAsJsonObject();
@@ -43,10 +43,10 @@ public class MMCPackParser {
                 File libFile = new File(Relauncher.workingDir, fileName);
                 Relauncher.LOGGER.info("Grabbing : {}", libFile.getName());
                 Downloader.downloadUntilSucceed(new URL(entry.getLeft()), entry.getRight(), libFile);
-                builder.append(libFile.getAbsolutePath()).append(":");
+                builder.append(libFile.getAbsolutePath()).append(ArgumentGetter.cpSplitter);
             }
 
-            cp += builder.deleteCharAt(builder.length() - 1).toString();
+            cp = builder.toString();
 
 
         } catch (IOException e) {

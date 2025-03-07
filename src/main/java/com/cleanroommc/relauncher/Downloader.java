@@ -11,6 +11,9 @@ import java.nio.file.Files;
 
 public class Downloader {
     static {
+        System.setProperty("javax.net.ssl.checkRevocation", "false");
+        System.setProperty("trust_all_cert", "true");
+        // Fxxk mojang's 8u51
         if (Config.proxy != null && !Config.proxy.isEmpty()) {
             if (!Config.proxy.startsWith("http") && !Config.proxy.startsWith("socks")) {
                 throw new RuntimeException("Invalid proxy config!");
