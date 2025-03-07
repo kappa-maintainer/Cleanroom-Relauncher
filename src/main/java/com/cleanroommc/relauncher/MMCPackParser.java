@@ -83,7 +83,7 @@ public class MMCPackParser {
                         if (name.getAsString().startsWith("com.mojang:text2speech")) {
                             JsonElement classifiers = downloads.getAsJsonObject().get("classifiers");
                             if (classifiers != null) {
-                                if ((SystemUtils.IS_OS_LINUX || SystemUtils.IS_OS_FREE_BSD) && System.getProperty("os.arch").equals("x86_64")) {
+                                if ((SystemUtils.IS_OS_LINUX) && System.getProperty("os.arch").contains("64") && !System.getProperty("os.arch").toLowerCase().contains("arm")) {
                                     JsonElement linux = classifiers.getAsJsonObject().get("natives-linux");
                                     result.add(Pair.of(linux.getAsJsonObject().get("url").getAsString(), linux.getAsJsonObject().get("sha1").getAsString()));
                                     return;
