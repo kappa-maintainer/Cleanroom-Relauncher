@@ -46,7 +46,7 @@ public class MMCPackParser {
                 builder.append(libFile.getAbsolutePath()).append(ArgumentGetter.cpSplitter);
             }
 
-            cp = builder.toString();
+            cp += builder.toString();
 
 
         } catch (IOException e) {
@@ -124,7 +124,7 @@ public class MMCPackParser {
         String arch = "";
         if (SystemUtils.IS_OS_WINDOWS) {
             os = "windows";
-            if (System.getProperty("os.arch").contains("64")) {
+            if (!System.getProperty("os.arch").contains("64")) {
                 arch = "x86";
             }
         } else if (SystemUtils.IS_OS_LINUX) {
@@ -144,6 +144,7 @@ public class MMCPackParser {
         if (!arch.isEmpty()) {
             suffix += "-" + arch;
         }
+        Relauncher.LOGGER.info("LWJGL suffix: {}, os.arch: {}", suffix, System.getProperty("os.arch"));
         return suffix;
     }
 

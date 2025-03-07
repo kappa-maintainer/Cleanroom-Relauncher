@@ -7,7 +7,6 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class ArgumentGetter {
@@ -29,7 +28,6 @@ public class ArgumentGetter {
         origin.remove(0);
         origin.add(0, "top.outlands.foundation.boot.Foundation");
         result.addAll(origin);
-        Relauncher.LOGGER.info(result);
         return result;
     }
 }

@@ -2,10 +2,12 @@ package com.cleanroommc.relauncher;
 
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.common.FMLCommonHandler;
+import net.minecraftforge.fml.common.FMLLog;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.JavaVersion;
 import org.apache.commons.lang3.SystemUtils;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -78,7 +81,9 @@ public class Relauncher implements IFMLLoadingPlugin {
                 List<String> args = ArgumentGetter.getLaunchArgs();
                 ProcessBuilder relaunch = new ProcessBuilder(args);
                 try {
+
                     Process p = relaunch.directory(Launch.minecraftHome).inheritIO().start();
+
                     BufferedReader inputReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     BufferedReader errorReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
                     String line;
@@ -97,7 +102,7 @@ public class Relauncher implements IFMLLoadingPlugin {
 
 
             }
-            FMLCommonHandler.instance().exitJava(0, true);
+            FMLCommonHandler.instance().exitJava(0, false);
         }
         // Do nothing on Java 9+
     }
