@@ -3,6 +3,7 @@ package com.cleanroommc.relauncher;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.JavaVersion;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.logging.log4j.LogManager;
@@ -10,11 +11,15 @@ import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
 import javax.swing.*;
+import java.awt.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @IFMLLoadingPlugin.MCVersion("1.12.2")
 public class Relauncher implements IFMLLoadingPlugin {
@@ -35,24 +40,29 @@ public class Relauncher implements IFMLLoadingPlugin {
                 FMLCommonHandler.instance().exitJava(0, true);
             }*/
             if (entry.startsWith("org.prismlauncher") || entry.startsWith("org.multimc") || entry.startsWith("org.polymc")) {
+                Config.syncConfig();
                 // MMC-based, start installation
                 LOGGER.info("MMC detected");
-                JDialog jDialog = new JDialog();
+                /*JDialog jDialog = new JDialog();
+                jDialog.setLayout(new BorderLayout());
                 jDialog.add(new JLabel("MMC-based launcher detected, will install Cleanroom MMC pack"));
-                jDialog.setVisible(true);
+                jDialog.pack();
+                jDialog.setAlwaysOnTop(true);
+                jDialog.setLocationRelativeTo(null);
+                jDialog.setVisible(true);*/
                 MMCPackDownloader.downloadAndExtract();
                 File packDir = new File(workingDir, "mmcpack");
-                File[] fileList = packDir.listFiles();
-                if (fileList != null) {
-                    for (File file: fileList) {
-                        if (!file.getName().equals(".packignore") && !file.getName().equals("instance.cfg")) {
-                            try {
-                                Files.copy(file.toPath(), Paths.get(Launch.minecraftHome.getParentFile().toPath() + File.pathSeparator + file.getAbsolutePath().replace(workingDir.getAbsolutePath(), "")));
-                            } catch (IOException e) {
-                                LOGGER.error("Error while copying mmc pack", e);
-                            }
-                        }
-                    }
+                File instance = Launch.minecraftHome.getParentFile();
+                File libraries = new File(instance, "libraries");
+                File patches = new File(instance, "patches");
+                libraries.mkdirs();
+                patches.mkdirs();
+                try {
+                    FileUtils.copyDirectory(new File(packDir, "libraries"), libraries);
+                    FileUtils.copyDirectory(new File(packDir, "patches"), patches);
+                    FileUtils.copyFile(new File(packDir, "mmc-pack.json"), new File(instance, "mmc-pack.json"));
+                } catch (IOException e) {
+                    LOGGER.error("Error while copying mmc pack", e);
                 }
                 LOGGER.info("Install finish, please restart instance in Java 21");
 
@@ -84,11 +94,10 @@ public class Relauncher implements IFMLLoadingPlugin {
                     LOGGER.info("Launch failed: ", e);
                     FMLCommonHandler.instance().exitJava(1, false);
                 }
-                FMLCommonHandler.instance().exitJava(0, false);
 
 
             }
-            //FMLCommonHandler.instance().exitJava(0, true);
+            FMLCommonHandler.instance().exitJava(0, true);
         }
         // Do nothing on Java 9+
     }

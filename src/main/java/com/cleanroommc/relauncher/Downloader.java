@@ -11,7 +11,7 @@ import java.nio.file.Files;
 
 public class Downloader {
     static {
-        if (!Config.proxy.isEmpty()) {
+        if (Config.proxy != null && !Config.proxy.isEmpty()) {
             if (!Config.proxy.startsWith("http") && !Config.proxy.startsWith("socks")) {
                 throw new RuntimeException("Invalid proxy config!");
             }
