@@ -14,6 +14,8 @@ import org.apache.logging.log4j.Logger;
 import javax.annotation.Nullable;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -29,6 +31,7 @@ public class Relauncher implements IFMLLoadingPlugin {
 
     public static final File workingDir = new File(Launch.minecraftHome, "relauncher");
     public static final Logger LOGGER = LogManager.getLogger("cleanroom_relauncher");
+    static final Object o = new Object();
 
     public Relauncher() {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) { // Java 9 shouldn't be possible on Forge
@@ -46,13 +49,21 @@ public class Relauncher implements IFMLLoadingPlugin {
                 Config.syncConfig();
                 // MMC-based, start installation
                 LOGGER.info("MMC detected");
-                /*JDialog jDialog = new JDialog();
-                jDialog.setLayout(new BorderLayout());
+                JDialog jDialog = new JDialog();
+                jDialog.setLayout(new GridLayout());
                 jDialog.add(new JLabel("MMC-based launcher detected, will install Cleanroom MMC pack"));
                 jDialog.pack();
                 jDialog.setAlwaysOnTop(true);
                 jDialog.setLocationRelativeTo(null);
-                jDialog.setVisible(true);*/
+                jDialog.addWindowListener(new ResumeListener());
+                jDialog.setVisible(true);
+                synchronized (o) {
+                    try {
+                        o.wait();
+                    } catch (InterruptedException e) {
+                        LOGGER.error(e);
+                    }
+                }
                 MMCPackDownloader.downloadAndExtract();
                 File packDir = new File(workingDir, "mmcpack");
                 File instance = Launch.minecraftHome.getParentFile();
@@ -97,12 +108,12 @@ public class Relauncher implements IFMLLoadingPlugin {
                     }
                 } catch (IOException e) {
                     LOGGER.info("Launch failed: ", e);
-                    FMLCommonHandler.instance().exitJava(1, false);
+                    throw new RuntimeException("Launch Failed, quitting");
                 }
 
 
             }
-            FMLCommonHandler.instance().exitJava(0, false);
+            throw new RuntimeException("Game closed, quitting");
         }
         // Do nothing on Java 9+
     }
@@ -131,5 +142,42 @@ public class Relauncher implements IFMLLoadingPlugin {
     @Override
     public String getAccessTransformerClass() {
         return null;
+    }
+
+    public static class ResumeListener implements WindowListener {
+        @Override
+        public void windowOpened(WindowEvent windowEvent) {
+
+        }
+
+        @Override
+        public void windowClosing(WindowEvent windowEvent) {
+            o.notify();
+        }
+
+        @Override
+        public void windowClosed(WindowEvent windowEvent) {
+
+        }
+
+        @Override
+        public void windowIconified(WindowEvent windowEvent) {
+
+        }
+
+        @Override
+        public void windowDeiconified(WindowEvent windowEvent) {
+
+        }
+
+        @Override
+        public void windowActivated(WindowEvent windowEvent) {
+
+        }
+
+        @Override
+        public void windowDeactivated(WindowEvent windowEvent) {
+
+        }
     }
 }

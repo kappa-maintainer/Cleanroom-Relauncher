@@ -1,10 +1,10 @@
 package com.cleanroommc.relauncher;
 
+import net.minecraft.launchwrapper.Launch;
+
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.io.BufferedReader;
 import java.io.File;
@@ -14,12 +14,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Initializer {
-    private static final Object o = new Object();
     public static void InitJavaAndArg() {
         JFrame.setDefaultLookAndFeelDecorated(true);
         JFrame mainDialog = new JFrame();
         mainDialog.setLayout(new BorderLayout());
-        JFileChooser jvmPicker = new JFileChooser(new File(System.getProperty("user.home")));
+        JFileChooser jvmPicker = new JFileChooser(Launch.minecraftHome);
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
 
@@ -66,8 +65,8 @@ public class Initializer {
         button.addActionListener(actionEvent -> {
             if (actionEvent.getActionCommand().equals("confirm")) {
                 mainDialog.dispose();
-                synchronized (o) {
-                    o.notify();
+                synchronized (Relauncher.o) {
+                    Relauncher.o.notify();
                 }
                 /*if (isJavaNewerThan21(jvmPicker.getSelectedFile())) {
                     mainDialog.dispose();
@@ -85,9 +84,9 @@ public class Initializer {
         Relauncher.LOGGER.info("Launching GUI");
         mainDialog.pack();
         mainDialog.setVisible(true);
-        synchronized (o) {
+        synchronized (Relauncher.o) {
             try {
-                o.wait();
+                Relauncher.o.wait();
             } catch (InterruptedException e) {
                 Relauncher.LOGGER.error(e);
             }

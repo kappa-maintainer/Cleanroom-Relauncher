@@ -7,11 +7,14 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
+import javax.swing.*;
+import java.awt.*;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.List;
 
 public class MMCPackParser {
     public static String cp;
@@ -37,14 +40,28 @@ public class MMCPackParser {
             result.addAll(parseAndAddLwjglLibraries(lwjgl));
 
             StringBuilder builder = new StringBuilder();
+            JDialog jDialog = new JDialog();
+            jDialog.setLayout(new BorderLayout());
+            jDialog.setAlwaysOnTop(true);
+            jDialog.setLocationRelativeTo(null);
+            jDialog.setResizable(false);
+            JProgressBar progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
+            progressBar.setMaximum(result.size() * 10);
+            progressBar.setMinimum(0);
+            jDialog.add(progressBar, BorderLayout.CENTER);
+            jDialog.setAlwaysOnTop(true);
+            jDialog.pack();
+            jDialog.setVisible(true);
             for (Pair<String, String> entry : result){
                 String[] a = entry.getKey().split("/");
                 String fileName = a[a.length - 1];
                 File libFile = new File(Relauncher.workingDir, fileName);
                 Relauncher.LOGGER.info("Grabbing : {}", libFile.getName());
                 Downloader.downloadUntilSucceed(new URL(entry.getLeft()), entry.getRight(), libFile);
+                progressBar.setValue(progressBar.getValue() + 10);
                 builder.append(libFile.getAbsolutePath()).append(ArgumentGetter.cpSplitter);
             }
+            jDialog.setVisible(false);
 
             cp += builder.toString();
 
