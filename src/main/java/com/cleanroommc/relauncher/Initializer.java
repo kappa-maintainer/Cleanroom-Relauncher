@@ -49,11 +49,13 @@ public class Initializer {
         panel.add(local, BorderLayout.WEST);
 
         JDialog warning = new JDialog(mainDialog, Dialog.ModalityType.APPLICATION_MODAL);
+        JLabel label = new JLabel("Invalid Java path");
+        label.setHorizontalAlignment(JLabel.CENTER);
         warning.setLayout(new BorderLayout());
-        warning.add(new JLabel("Invalid Java path"), BorderLayout.CENTER);
+        warning.add(label, BorderLayout.CENTER);
         warning.setResizable(false);
         warning.setAlwaysOnTop(true);
-        warning.pack();
+        warning.setSize(400, 200);
         warning.setLocationRelativeTo(mainDialog);
         mainDialog.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 
@@ -64,17 +66,16 @@ public class Initializer {
         button.setActionCommand("confirm");
         button.addActionListener(actionEvent -> {
             if (actionEvent.getActionCommand().equals("confirm")) {
-                mainDialog.dispose();
-                synchronized (Relauncher.o) {
-                    Relauncher.o.notify();
-                }
-                /*if (isJavaNewerThan21(jvmPicker.getSelectedFile())) {
+                if (isJavaNewerThan21(jvmPicker.getSelectedFile())) {
                     mainDialog.dispose();
+                    synchronized (Relauncher.o) {
+                        Relauncher.o.notify();
+                    }
                     Relauncher.LOGGER.info("Java set");
                 } else {
                     Relauncher.LOGGER.warn("Invalid Java");
                     warning.setVisible(true);
-                }*/
+                }
             }
         });
         panel.add(button, BorderLayout.EAST);
@@ -82,6 +83,7 @@ public class Initializer {
 
 
         Relauncher.LOGGER.info("Launching GUI");
+        mainDialog.validate();
         mainDialog.pack();
         mainDialog.setVisible(true);
         synchronized (Relauncher.o) {
@@ -104,7 +106,7 @@ public class Initializer {
         ProcessBuilder builder = new ProcessBuilder(file.getAbsolutePath(), "-version");
         try {
             Process p = builder.start();
-            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getInputStream()));
+            BufferedReader reader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
             List<String> output = new ArrayList<>();
             String line;
             while ((line = reader.readLine()) != null) {

@@ -18,6 +18,7 @@ import java.util.List;
 
 public class MMCPackParser {
     public static String cp;
+    private static final String osArch = System.getProperty("os.arch");
     public static void parseMMCPack() {
         String version = CleanroomVersionParser.getVersion();
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
@@ -48,15 +49,21 @@ public class MMCPackParser {
             JProgressBar progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
             progressBar.setMaximum(result.size() * 10);
             progressBar.setMinimum(0);
+            JLabel label = new JLabel();
+            label.setSize(800, 20);
+            label.setHorizontalAlignment(JLabel.CENTER);
             jDialog.add(progressBar, BorderLayout.CENTER);
+            jDialog.add(label, BorderLayout.SOUTH);
             jDialog.setAlwaysOnTop(true);
-            jDialog.pack();
+            jDialog.validate();
+            jDialog.setSize(1000, 50);
             jDialog.setVisible(true);
             for (Pair<String, String> entry : result){
                 String[] a = entry.getKey().split("/");
                 String fileName = a[a.length - 1];
                 File libFile = new File(Relauncher.workingDir, fileName);
                 Relauncher.LOGGER.info("Grabbing : {}", libFile.getName());
+                label.setText("Grabbing : " + libFile.getName());
                 Downloader.downloadUntilSucceed(new URL(entry.getLeft()), entry.getRight(), libFile);
                 progressBar.setValue(progressBar.getValue() + 10);
                 builder.append(libFile.getAbsolutePath()).append(ArgumentGetter.cpSplitter);
@@ -100,7 +107,7 @@ public class MMCPackParser {
                         if (name.getAsString().startsWith("com.mojang:text2speech")) {
                             JsonElement classifiers = downloads.getAsJsonObject().get("classifiers");
                             if (classifiers != null) {
-                                if ((SystemUtils.IS_OS_LINUX) && System.getProperty("os.arch").contains("64") && !System.getProperty("os.arch").toLowerCase().contains("arm")) {
+                                if ((SystemUtils.IS_OS_LINUX) && osArch.contains("64") && !osArch.toLowerCase().contains("arm") && !osArch.toLowerCase().contains("aarch")) {
                                     JsonElement linux = classifiers.getAsJsonObject().get("natives-linux");
                                     result.add(Pair.of(linux.getAsJsonObject().get("url").getAsString(), linux.getAsJsonObject().get("sha1").getAsString()));
                                     return;
@@ -141,7 +148,7 @@ public class MMCPackParser {
         String arch = "";
         if (SystemUtils.IS_OS_WINDOWS) {
             os = "windows";
-            if (!System.getProperty("os.arch").contains("64")) {
+            if (!osArch.contains("64")) {
                 arch = "x86";
             }
         } else if (SystemUtils.IS_OS_LINUX) {
@@ -149,9 +156,9 @@ public class MMCPackParser {
         } else if (SystemUtils.IS_OS_MAC) {
             os = "macos";
         }
-        if (System.getProperty("os.arch").toLowerCase().contains("arm")) {
+        if (osArch.toLowerCase().contains("arm") || osArch.contains("aarch")) {
             arch = "arm";
-            if (System.getProperty("os.arch").contains("64")) {
+            if (osArch.contains("64")) {
                 arch += "64";
             } else {
                 arch += "32";
@@ -161,7 +168,7 @@ public class MMCPackParser {
         if (!arch.isEmpty()) {
             suffix += "-" + arch;
         }
-        Relauncher.LOGGER.info("LWJGL suffix: {}, os.arch: {}", suffix, System.getProperty("os.arch"));
+        Relauncher.LOGGER.info("LWJGL suffix: {}, os.arch: {}", suffix, osArch);
         return suffix;
     }
 
