@@ -47,16 +47,17 @@ public class MMCPackParser {
             jDialog.setLocationRelativeTo(null);
             jDialog.setResizable(false);
             JProgressBar progressBar = new JProgressBar(JProgressBar.HORIZONTAL);
-            progressBar.setMaximum(result.size() * 10);
+            progressBar.setMaximum(result.size());
             progressBar.setMinimum(0);
             JLabel label = new JLabel();
-            label.setSize(800, 20);
+            label.setSize(GUIUtils.scaledWidth, GUIUtils.scaledWidth / 32);
             label.setHorizontalAlignment(JLabel.CENTER);
             jDialog.add(progressBar, BorderLayout.CENTER);
             jDialog.add(label, BorderLayout.SOUTH);
             jDialog.setAlwaysOnTop(true);
             jDialog.validate();
-            jDialog.setSize(1000, 50);
+            jDialog.setSize(GUIUtils.scaledWidth, GUIUtils.scaledWidth / 16);
+            GUIUtils.setCentral(jDialog);
             jDialog.setVisible(true);
             for (Pair<String, String> entry : result){
                 String[] a = entry.getKey().split("/");
@@ -65,7 +66,7 @@ public class MMCPackParser {
                 Relauncher.LOGGER.info("Grabbing : {}", libFile.getName());
                 label.setText("Grabbing : " + libFile.getName());
                 Downloader.downloadUntilSucceed(new URL(entry.getLeft()), entry.getRight(), libFile);
-                progressBar.setValue(progressBar.getValue() + 10);
+                progressBar.setValue(progressBar.getValue() + 1);
                 builder.append(libFile.getAbsolutePath()).append(ArgumentGetter.cpSplitter);
             }
             jDialog.setVisible(false);

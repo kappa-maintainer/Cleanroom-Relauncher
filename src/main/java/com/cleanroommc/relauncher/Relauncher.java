@@ -1,13 +1,11 @@
 package com.cleanroommc.relauncher;
 
+import io.github.toolfactory.jvm.Driver;
 import net.minecraft.launchwrapper.Launch;
-import net.minecraftforge.fml.common.FMLCommonHandler;
-import net.minecraftforge.fml.common.FMLLog;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.JavaVersion;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,14 +15,14 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.*;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Field;
 import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @IFMLLoadingPlugin.MCVersion("1.12.2")
 public class Relauncher implements IFMLLoadingPlugin {
@@ -32,19 +30,27 @@ public class Relauncher implements IFMLLoadingPlugin {
     public static final File workingDir = new File(Launch.minecraftHome, "relauncher");
     public static final Logger LOGGER = LogManager.getLogger("cleanroom_relauncher");
     static final Object o = new Object();
+    private static final MethodHandle exit;
 
-    public Relauncher() {
+    static {
+        try {
+            // For FMLSecurityManager
+            exit = MethodHandles.lookup().findStatic(System.class, "exit", MethodType.methodType(void.class, int.class));
+            Driver driver = Driver.Factory.getNew();
+            Field security = Arrays.stream(driver.getDeclaredFields(System.class)).filter(field -> field.getName().equals("security")).findFirst().get();
+            driver.setFieldValue(null, security, null);
+        } catch (Throwable e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Relauncher() throws Throwable {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) { // Java 9 shouldn't be possible on Forge
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
             String entry = stacks[stacks.length - 1].getClassName();
             if (!workingDir.exists()) {
                 workingDir.mkdirs();
             }
-            /*
-            if (Config.javaPath.isEmpty()) {
-                LOGGER.warn("Config file created, now fill your java 21 path");
-                FMLCommonHandler.instance().exitJava(0, true);
-            }*/
             if (entry.startsWith("org.prismlauncher") || entry.startsWith("org.multimc") || entry.startsWith("org.polymc")) {
                 Config.syncConfig();
                 // MMC-based, start installation
@@ -54,7 +60,7 @@ public class Relauncher implements IFMLLoadingPlugin {
                 jDialog.add(new JLabel("MMC-based launcher detected, will install Cleanroom MMC pack"));
                 jDialog.pack();
                 jDialog.setAlwaysOnTop(true);
-                jDialog.setLocationRelativeTo(null);
+                GUIUtils.setCentral(jDialog);
                 jDialog.addWindowListener(new ResumeListener());
                 jDialog.setVisible(true);
                 synchronized (o) {
@@ -108,12 +114,12 @@ public class Relauncher implements IFMLLoadingPlugin {
                     }
                 } catch (IOException e) {
                     LOGGER.info("Launch failed: ", e);
-                    throw new RuntimeException("Launch Failed, quitting");
+                    exit.invoke(1);
                 }
 
 
             }
-            throw new RuntimeException("Game closed, quitting");
+            exit.invoke(0);
         }
         // Do nothing on Java 9+
     }

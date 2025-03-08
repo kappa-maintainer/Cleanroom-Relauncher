@@ -55,12 +55,11 @@ public class Initializer {
         warning.add(label, BorderLayout.CENTER);
         warning.setResizable(false);
         warning.setAlwaysOnTop(true);
-        warning.setSize(400, 200);
+        warning.setSize(GUIUtils.scaledWidth, GUIUtils.scaledHeight / 16);
         warning.setLocationRelativeTo(mainDialog);
         mainDialog.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
 
         mainDialog.setResizable(false);
-        mainDialog.setLocationRelativeTo(null);
 
         JButton button = new JButton("Confirm");
         button.setActionCommand("confirm");
@@ -85,6 +84,7 @@ public class Initializer {
         Relauncher.LOGGER.info("Launching GUI");
         mainDialog.validate();
         mainDialog.pack();
+        GUIUtils.setCentral(mainDialog);
         mainDialog.setVisible(true);
         synchronized (Relauncher.o) {
             try {

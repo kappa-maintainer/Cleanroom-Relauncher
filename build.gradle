@@ -201,6 +201,7 @@ processResources {
 }
 
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     manifest {
         def attribute_map = [:]
         if (propertyBool('is_coremod')) {
