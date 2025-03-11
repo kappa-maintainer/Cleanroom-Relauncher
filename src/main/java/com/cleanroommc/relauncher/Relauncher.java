@@ -88,7 +88,7 @@ public class Relauncher implements IFMLLoadingPlugin {
                 try {
 
                     Process p = relaunch.directory(Launch.minecraftHome).inheritIO().start();
-
+                    Runtime.getRuntime().addShutdownHook(new Thread(p::destroy));
                     BufferedReader inputReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     BufferedReader errorReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
                     String line;
