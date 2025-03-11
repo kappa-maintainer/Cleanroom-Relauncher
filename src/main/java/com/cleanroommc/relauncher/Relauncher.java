@@ -1,7 +1,7 @@
 package com.cleanroommc.relauncher;
 
-import io.github.toolfactory.jvm.Driver;
 import net.minecraft.launchwrapper.Launch;
+import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.JavaVersion;
@@ -15,12 +15,7 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.*;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.MethodType;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -30,19 +25,6 @@ public class Relauncher implements IFMLLoadingPlugin {
     public static final File workingDir = new File(Launch.minecraftHome, "relauncher");
     public static final Logger LOGGER = LogManager.getLogger("cleanroom_relauncher");
     static final Object o = new Object();
-    private static final MethodHandle exit;
-
-    static {
-        try {
-            // For FMLSecurityManager
-            exit = MethodHandles.lookup().findStatic(System.class, "exit", MethodType.methodType(void.class, int.class));
-            Driver driver = Driver.Factory.getNew();
-            Field security = Arrays.stream(driver.getDeclaredFields(System.class)).filter(field -> field.getName().equals("security")).findFirst().get();
-            driver.setFieldValue(null, security, null);
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     public Relauncher() throws Throwable {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) { // Java 9 shouldn't be possible on Forge
@@ -93,6 +75,12 @@ public class Relauncher implements IFMLLoadingPlugin {
                     Initializer.InitJavaAndArg();
                 }
                 Config.syncConfig();
+                if (Config.javaPath.isEmpty()) {
+                    LOGGER.info("Java path empty, resetting");
+                    Files.delete(Config.configFile.toPath());
+                    Initializer.InitJavaAndArg();
+                    Config.syncConfig();
+                }
                 MMCPackDownloader.downloadAndExtract();
                 MMCPackParser.parseMMCPack();
                 List<String> args = ArgumentGetter.getLaunchArgs();
@@ -114,12 +102,12 @@ public class Relauncher implements IFMLLoadingPlugin {
                     }
                 } catch (IOException e) {
                     LOGGER.info("Launch failed: ", e);
-                    exit.invoke(1);
+                    FMLCommonHandler.instance().exitJava(0, false);
                 }
 
 
             }
-            exit.invoke(0);
+            FMLCommonHandler.instance().exitJava(0, false);
         }
         // Do nothing on Java 9+
     }
