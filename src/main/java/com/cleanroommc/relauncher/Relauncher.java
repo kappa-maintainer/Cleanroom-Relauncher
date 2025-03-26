@@ -1,6 +1,8 @@
 package com.cleanroommc.relauncher;
 
+import com.formdev.flatlaf.FlatLightLaf;
 import net.minecraft.launchwrapper.Launch;
+import net.minecraftforge.fml.ExitWrapper;
 import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 import org.apache.commons.io.FileUtils;
@@ -28,6 +30,7 @@ public class Relauncher implements IFMLLoadingPlugin {
 
     public Relauncher() throws Throwable {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) { // Java 9 shouldn't be possible on Forge
+            FlatLightLaf.setup();
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
             String entry = stacks[stacks.length - 1].getClassName();
             if (!workingDir.exists()) {
@@ -73,16 +76,16 @@ public class Relauncher implements IFMLLoadingPlugin {
                 if (!Files.exists(new File(new File(Launch.minecraftHome, "config"), "cleanroom_relauncher.cfg").toPath())) {
                     LOGGER.info("No config found, asking for input");
                     Initializer.InitJavaAndArg();
+                    Config.syncConfig();
+                } else {
+                    Config.syncConfig();
+                    MMCPackParser.parseMMCPack();
                 }
-                Config.syncConfig();
                 if (Config.javaPath.isEmpty()) {
                     LOGGER.info("Java path empty, resetting");
                     Files.delete(Config.configFile.toPath());
                     Initializer.InitJavaAndArg();
-                    Config.syncConfig();
                 }
-                MMCPackDownloader.downloadAndExtract();
-                MMCPackParser.parseMMCPack();
                 List<String> args = ArgumentGetter.getLaunchArgs();
                 ProcessBuilder relaunch = new ProcessBuilder(args);
                 try {
@@ -102,12 +105,12 @@ public class Relauncher implements IFMLLoadingPlugin {
                     }
                 } catch (IOException e) {
                     LOGGER.info("Launch failed: ", e);
-                    FMLCommonHandler.instance().exitJava(0, false);
+                    ExitWrapper.exit(1);
                 }
 
 
             }
-            FMLCommonHandler.instance().exitJava(0, false);
+            ExitWrapper.exit(0);
         }
         // Do nothing on Java 9+
     }

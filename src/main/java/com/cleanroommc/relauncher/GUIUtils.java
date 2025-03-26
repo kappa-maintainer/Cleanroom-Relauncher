@@ -1,6 +1,5 @@
 package com.cleanroommc.relauncher;
 
-import javax.swing.*;
 import java.awt.*;
 
 public class GUIUtils {
@@ -19,4 +18,14 @@ public class GUIUtils {
     public static void setCentral(Component c) {
         c.setLocation(screenWidth / 2 - c.getWidth() / 2, screenHeight / 2 - c.getHeight() / 2);
     }
+
+    public static void enlargeFont(Component component) {
+        enlargeFont(component, Font.PLAIN, 20);
+    }
+
+    public static void enlargeFont(Component component, int type, int size) {
+        Font font = component.getFont();
+        component.setFont(new Font(font.getName(), type, size));
+    }
+
 }
