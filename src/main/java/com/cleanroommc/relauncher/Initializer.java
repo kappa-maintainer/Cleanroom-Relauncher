@@ -56,7 +56,7 @@ public class Initializer {
             confirmButton.setEnabled(value);
             pathText.setEnabled(value);
             verifyButton.setEnabled(value);
-            detectJvmButton.setEnabled(value);
+            //detectJvmButton.setEnabled(value);
             browserButton.setEnabled(value);
             libraryPathText.setEnabled(value);
             libraryBrowserButton.setEnabled(value);
@@ -152,6 +152,8 @@ public class Initializer {
 
         GUIUtils.enlargeFont(libraryPathLabel);
         libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
+
+        detectJvmButton.setEnabled(false);
 
         confirmButton.addActionListener(actionEvent -> {
             if (actionEvent.getActionCommand().equals("confirm")) {
