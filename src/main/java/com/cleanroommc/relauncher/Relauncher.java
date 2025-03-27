@@ -31,6 +31,7 @@ public class Relauncher implements IFMLLoadingPlugin {
 
     public Relauncher() throws Throwable {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9) && FMLCommonHandler.instance().getSide() == Side.CLIENT) { // Java 9 shouldn't be possible on Forge
+            CertFixer.fixCert();
             FlatLightLaf.setup();
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
             String entry = stacks[stacks.length - 1].getClassName();

@@ -17,8 +17,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class Downloader {
     private static ProxyInfo proxyInfo = null;
     static {
-        System.setProperty("javax.net.ssl.checkRevocation", "false");
-        System.setProperty("trust_all_cert", "true");
         BrowserInfo.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
         // Fxxk mojang's 8u51
         if (!Strings.isNullOrEmpty(Config.proxyAddr) && Config.proxyPort > 0) {
