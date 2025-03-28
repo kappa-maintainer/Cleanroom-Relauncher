@@ -1,11 +1,8 @@
 package com.cleanroommc.relauncher;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.ExitWrapper;
-import net.minecraftforge.fml.common.FMLCommonHandler;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
-import net.minecraftforge.fml.relauncher.Side;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.JavaVersion;
 import org.apache.commons.lang3.SystemUtils;
@@ -32,7 +29,6 @@ public class Relauncher implements IFMLLoadingPlugin {
     public Relauncher() throws Throwable {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) { // Java 9 shouldn't be possible on Forge
             CertFixer.fixCert();
-            FlatLightLaf.setup();
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
             String entry = stacks[stacks.length - 1].getClassName();
             if (!workingDir.exists()) {

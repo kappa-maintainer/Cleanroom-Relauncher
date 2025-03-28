@@ -6,9 +6,13 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 public class JavaDetector {
-
 
 
     private static String queryRegisterValue(String location, String name) {
@@ -16,7 +20,7 @@ public class JavaDetector {
 
         try {
             Process process = Runtime.getRuntime().exec(new String[]{"cmd", "/c", "reg", "query", location, "/v", name});
-            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), Charset.defaultCharset()))) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                 for (String line; (line = reader.readLine()) != null; ) {
                     if (StringUtils.isNotBlank(line)) {
                         if (last && line.trim().startsWith(name)) {
@@ -40,5 +44,24 @@ public class JavaDetector {
         }
 
         return null;
+    }
+
+
+    private static List<String> querySubFolders(String location) {
+        List<String> res = new ArrayList<>();
+
+        try {
+            Process process = Runtime.getRuntime().exec(new String[]{"cmd", "/c", "reg", "query", location});
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), Charset.defaultCharset()))) {
+                for (String line; (line = reader.readLine()) != null; ) {
+                    if (line.startsWith(location) && !line.equals(location)) {
+                        res.add(line);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            Relauncher.LOGGER.warn("Failed to query sub folders of " + location, e);
+        }
+        return res;
     }
 }

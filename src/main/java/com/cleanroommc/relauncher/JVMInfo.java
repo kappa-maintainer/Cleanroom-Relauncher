@@ -79,4 +79,15 @@ public class JVMInfo {
     public String getVendor() {
         return vendor;
     }
+
+    @Override
+    public String toString() {
+        return "JVMInfo{" +
+                "file=" + file +
+                ", specification=" + specification +
+                ", arch='" + arch + '\'' +
+                ", version='" + version + '\'' +
+                ", vendor='" + vendor + '\'' +
+                '}';
+    }
 }

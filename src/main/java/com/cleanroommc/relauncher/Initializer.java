@@ -1,5 +1,6 @@
 package com.cleanroommc.relauncher;
 
+import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
 
 import javax.swing.*;
@@ -10,6 +11,8 @@ import javax.swing.text.AbstractDocument;
 import javax.swing.text.DocumentFilter;
 import java.awt.*;
 import java.awt.event.ItemEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -146,6 +149,13 @@ public class Initializer {
         mainFrame.add(confirmButton, c);
 
         mainFrame.setTitle("Relauncher Initialization Settings");
+        mainFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        mainFrame.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent windowEvent) {
+                ExitWrapper.exit(0);
+            }
+        });
         GUIUtils.enlargeFont(pathLabel);
         pathLabel.setHorizontalAlignment(JLabel.CENTER);
         pathText.setToolTipText("Input your Java 21+ executable here");
@@ -249,6 +259,7 @@ public class Initializer {
             }
         });
 
+        browserButton.setActionCommand("browser");
         browserButton.addActionListener(actionEvent -> {
             if (actionEvent.getActionCommand().equals("browser")) {
                 GUIUtils.setCentral(jvmPicker);
@@ -376,6 +387,7 @@ public class Initializer {
 
     public static boolean isJavaNewerThan21(String path) {
         if (path == null) return false;
+        Relauncher.LOGGER.info("Checking path {}", path);
         return new JVMInfo(path).getSpecification() > 20;
     }
 
