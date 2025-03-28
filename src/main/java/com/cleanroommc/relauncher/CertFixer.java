@@ -32,10 +32,11 @@ public class CertFixer {
         String[] certs = new String[] {"e5-cross.der", "e6-cross.der", "isrg-root-x1-cross-signed.der", "isrg-root-x2-cross-signed.der", "r10.der", "r11.der"};
 
         for (String cert: certs){
-            InputStream certStream = CertFixer.class.getResourceAsStream(cert);
+            InputStream certStream = CertFixer.class.getResourceAsStream("/" + cert);
 
             InputStream caInput = new BufferedInputStream(certStream);
             Certificate crt = cf.generateCertificate(caInput);
+            caInput.close();
 
             keyStore.setCertificateEntry(cert.split("\\.")[0], crt);
         }

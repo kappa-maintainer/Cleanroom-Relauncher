@@ -30,7 +30,7 @@ public class Relauncher implements IFMLLoadingPlugin {
     static final Object o = new Object();
 
     public Relauncher() throws Throwable {
-        if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9) && FMLCommonHandler.instance().getSide() == Side.CLIENT) { // Java 9 shouldn't be possible on Forge
+        if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) { // Java 9 shouldn't be possible on Forge
             CertFixer.fixCert();
             FlatLightLaf.setup();
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
@@ -88,6 +88,7 @@ public class Relauncher implements IFMLLoadingPlugin {
                     Files.delete(Config.configFile.toPath());
                     Initializer.InitJavaAndArg();
                 }
+                Initializer.hideWindow();
                 List<String> args = ArgumentGetter.getLaunchArgs();
                 ProcessBuilder relaunch = new ProcessBuilder(args);
                 try {

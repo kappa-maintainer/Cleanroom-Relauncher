@@ -71,7 +71,6 @@ public class Downloader {
             } else {
                 progress = 0;
             }
-            Relauncher.LOGGER.info("{} {} {}", info.getDownloaded(), info.getLength(), progress);
             SwingUtilities.invokeLater(() -> Initializer.getSubProgressbar().setValue(progress));
         };
         info.extract(stop, setProgress);

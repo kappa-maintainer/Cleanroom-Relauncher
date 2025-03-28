@@ -27,9 +27,9 @@ public class Initializer {
     private static final JLabel subStatusLabel = new JLabel();
     private static final JProgressBar subProgressbar = new JProgressBar(0, 100);
     private static JButton confirmButton;
+    private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
     public static void InitJavaAndArg() {
-        JFrame mainFrame = new JFrame();
         mainFrame.setLayout(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
 
@@ -187,7 +187,6 @@ public class Initializer {
                             }
                         }, "Relauncher Working Thread");
                         workingThread.start();
-                        mainFrame.setVisible(false);
                     } catch (Throwable t) {
                         Relauncher.LOGGER.error(t.getMessage());
                         Arrays.stream(t.getStackTrace()).forEach(Relauncher.LOGGER::info);
@@ -402,6 +401,10 @@ public class Initializer {
 
     public static void setGUIInteractable(boolean enable) {
         setInteractable.accept(enable);
+    }
+
+    public static void hideWindow() {
+        mainFrame.setVisible(false);
     }
 
 }
