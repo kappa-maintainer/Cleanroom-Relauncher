@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import javax.annotation.Nullable;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.*;
@@ -44,7 +45,14 @@ public class Relauncher implements IFMLLoadingPlugin {
                 jDialog.pack();
                 jDialog.setAlwaysOnTop(true);
                 GUIUtils.setCentral(jDialog);
-                jDialog.addWindowListener(new ResumeListener());
+                jDialog.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosing(WindowEvent windowEvent) {
+                        synchronized (o) {
+                            o.notify();
+                        }
+                    }
+                });
                 jDialog.setVisible(true);
                 synchronized (o) {
                     try {
@@ -140,40 +148,4 @@ public class Relauncher implements IFMLLoadingPlugin {
         return null;
     }
 
-    public static class ResumeListener implements WindowListener {
-        @Override
-        public void windowOpened(WindowEvent windowEvent) {
-
-        }
-
-        @Override
-        public void windowClosing(WindowEvent windowEvent) {
-            o.notify();
-        }
-
-        @Override
-        public void windowClosed(WindowEvent windowEvent) {
-
-        }
-
-        @Override
-        public void windowIconified(WindowEvent windowEvent) {
-
-        }
-
-        @Override
-        public void windowDeiconified(WindowEvent windowEvent) {
-
-        }
-
-        @Override
-        public void windowActivated(WindowEvent windowEvent) {
-
-        }
-
-        @Override
-        public void windowDeactivated(WindowEvent windowEvent) {
-
-        }
-    }
 }
