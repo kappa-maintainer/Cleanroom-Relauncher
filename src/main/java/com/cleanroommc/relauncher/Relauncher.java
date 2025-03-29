@@ -30,6 +30,7 @@ public class Relauncher implements IFMLLoadingPlugin {
     public Relauncher() throws Throwable {
         if (!SystemUtils.isJavaVersionAtLeast(JavaVersion.JAVA_9)) { // Java 9 shouldn't be possible on Forge
             CertFixer.fixCert();
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
             String entry = stacks[stacks.length - 1].getClassName();
             if (!workingDir.exists()) {
