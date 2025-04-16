@@ -3,13 +3,27 @@ package com.cleanroommc.relauncher;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
 
-import javax.swing.*;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JProgressBar;
+import javax.swing.JSpinner;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.DocumentFilter;
-import java.awt.*;
+import java.awt.Color;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
 import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -59,7 +73,7 @@ public class Initializer {
             confirmButton.setEnabled(value);
             pathText.setEnabled(value);
             verifyButton.setEnabled(value);
-            //detectJvmButton.setEnabled(value);
+            detectJvmButton.setEnabled(value);
             browserButton.setEnabled(value);
             libraryPathText.setEnabled(value);
             libraryBrowserButton.setEnabled(value);
@@ -163,7 +177,12 @@ public class Initializer {
         GUIUtils.enlargeFont(libraryPathLabel);
         libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
 
-        detectJvmButton.setEnabled(false);
+        detectJvmButton.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(detectJvmButton)) {
+                JDialog detect = getDetectorDialog(pathText, verifyButton);
+                detect.setVisible(true);
+            }
+        });
 
         confirmButton.addActionListener(actionEvent -> {
             if (actionEvent.getActionCommand().equals("confirm")) {
@@ -417,6 +436,57 @@ public class Initializer {
 
     public static void hideWindow() {
         mainFrame.setVisible(false);
+    }
+
+    private static JDialog getDetectorDialog(JTextField pathField, JButton verify) {
+        JDialog detector = new JDialog();
+        detector.setLayout(new GridBagLayout());
+        DefaultListModel<JVMInfo> model = new DefaultListModel<>();
+        for (JVMInfo i : JavaDetector.getInstalledJVMs()) {
+            model.addElement(i);
+        }
+        JList<JVMInfo> list = new JList<>(model);
+        JButton confirm = new JButton("Confirm");
+        JButton cancel = new JButton("Cancel");
+        GridBagConstraints c =new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = 0;
+        c.gridwidth = 3;
+        c.gridheight = 4;
+        detector.add(list, c);
+        c.gridy = 4;
+        c.gridheight = 1;
+        c.gridwidth = 1;
+        detector.add(cancel, c);
+        c.gridx = 1;
+        detector.add(confirm, c);
+
+        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        list.setLayoutOrientation(JList.VERTICAL);
+        list.setVisibleRowCount(-1);
+
+        detector.pack();
+        detector.setResizable(false);
+        detector.setAlwaysOnTop(true);
+        GUIUtils.setCentral(detector);
+
+
+        cancel.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(cancel)) {
+                detector.setVisible(false);
+            }
+        });
+
+        confirm.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(confirm)) {
+                detector.setVisible(false);
+                pathField.setText(list.getSelectedValue().getFile().getAbsolutePath());
+                verify.doClick();
+            }
+        });
+
+        return detector;
+
     }
 
 }

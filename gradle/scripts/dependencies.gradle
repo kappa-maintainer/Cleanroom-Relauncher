@@ -40,6 +40,7 @@ dependencies {
     embed 'com.github.axet:threads:0.0.14'
     embed 'org.json:json:20250107'
     embed 'org.jsoup:jsoup:1.19.1'
+    embed 'com.cleanroommc:java-utils:1.1.2'
 /*
     contain 'com.github.oshi:oshi-core:6.8.0'
     contain 'net.java.dev.jna:jna:5.17.0'
