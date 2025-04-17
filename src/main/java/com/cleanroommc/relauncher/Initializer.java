@@ -15,6 +15,7 @@ import javax.swing.JProgressBar;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
+import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.WindowConstants;
@@ -25,6 +26,8 @@ import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ItemEvent;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -445,15 +448,18 @@ public class Initializer {
         for (JVMInfo i : JavaDetector.getInstalledJVMs()) {
             model.addElement(i);
         }
-        JList<JVMInfo> list = new JList<>(model);
+        JList<JVMInfo> list = new JList<JVMInfo>(model);
         JButton confirm = new JButton("Confirm");
         JButton cancel = new JButton("Cancel");
+
         GridBagConstraints c =new GridBagConstraints();
+        c.fill = GridBagConstraints.CENTER;
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 2;
         c.gridheight = 4;
         detector.add(list, c);
+        c.fill = GridBagConstraints.HORIZONTAL;
         c.gridy = 4;
         c.gridheight = 1;
         c.gridwidth = 1;
@@ -484,6 +490,7 @@ public class Initializer {
                 verify.doClick();
             }
         });
+
 
         return detector;
 

@@ -33,23 +33,23 @@ public class JVMInfo {
             reader.close();
             for (String s : output) {
                 s = StringUtils.deleteWhitespace(s);
-                if (s.startsWith("java.specification.version")) {
+                if (s.startsWith("java.specification.version=")) {
                     s = s.substring(s.indexOf("=") + 1);
                     if (s.startsWith("1.")) {
-                        specification = Integer.parseInt(s.substring(s.indexOf(".")));
+                        specification = Integer.parseInt(s.substring(s.indexOf(".") + 1));
                     } else {
                         specification = Integer.parseInt(s);
                     }
                 }
-                if (s.startsWith("java.version")) {
+                if (s.startsWith("java.version=")) {
                     s = s.substring(s.indexOf("=") + 1);
                     version = s;
                 }
-                if (s.startsWith("java.vm.vendor")) {
+                if (s.startsWith("java.vm.vendor=")) {
                     s = s.substring(s.indexOf("=") + 1);
                     vendor = s;
                 }
-                if (s.startsWith("os.arch")) {
+                if (s.startsWith("os.arch=")) {
                     s = s.substring(s.indexOf("=") + 1);
                     arch = s;
                 }
@@ -82,6 +82,6 @@ public class JVMInfo {
 
     @Override
     public String toString() {
-        return specification + "|" + arch + "|" + version + "|" + vendor;
+        return specification + "|" + arch + "|" + version + "|" + vendor + "|" + file.getAbsolutePath();
     }
 }
