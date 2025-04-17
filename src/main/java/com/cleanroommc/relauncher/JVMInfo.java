@@ -82,12 +82,6 @@ public class JVMInfo {
 
     @Override
     public String toString() {
-        return "JVMInfo{" +
-                "file=" + file +
-                ", specification=" + specification +
-                ", arch='" + arch + '\'' +
-                ", version='" + version + '\'' +
-                ", vendor='" + vendor + '\'' +
-                '}';
+        return specification + "|" + arch + "|" + version + "|" + vendor;
     }
 }
