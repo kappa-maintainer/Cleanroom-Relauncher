@@ -30,6 +30,7 @@ public class Relauncher implements IFMLLoadingPlugin {
             CertFixer.fixCert();
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
+            if (isServer(stacks)) return;
             String entry = stacks[stacks.length - 1].getClassName();
             if (!workingDir.exists()) {
                 workingDir.mkdirs();
@@ -79,6 +80,15 @@ public class Relauncher implements IFMLLoadingPlugin {
             ExitWrapper.exit(0);
         }
         // Do nothing on Java 9+
+    }
+
+    private static boolean isServer(StackTraceElement[] stack) {
+        for (StackTraceElement e : stack) {
+            if (e.getClassName().equals("net.minecraftforge.fml.relauncher.ServerLaunchWrapper")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
