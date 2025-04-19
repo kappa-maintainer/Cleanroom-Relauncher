@@ -59,7 +59,7 @@ public class Initializer {
         JButton verifyButton = new JButton(toBeVerify);
         JButton detectJvmButton = new JButton("Detect Installed JVMs");
         JButton browserButton = new JButton("Browser...");
-        JLabel libraryPathLabel = new JLabel("↓ Library Path ↓");
+        JLabel libraryPathLabel = new JLabel("↓ Library Path (optional) ↓");
         JTextField libraryPathText = new JTextField();
         JFileChooser libraryPicker = getLibraryPathChooser();
         JCheckBox groupNameInPathCheckbox = new JCheckBox("Place Libraries in Group Name");
@@ -179,6 +179,8 @@ public class Initializer {
 
         GUIUtils.enlargeFont(libraryPathLabel);
         libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
+
+        libraryPathText.setToolTipText("Path to place the libraries, leave it empty to use default location");
 
         detectJvmButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(detectJvmButton)) {

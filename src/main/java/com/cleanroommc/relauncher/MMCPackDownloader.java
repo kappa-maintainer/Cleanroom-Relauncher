@@ -17,13 +17,15 @@ import java.util.zip.ZipFile;
 
 public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
-        String version = CleanroomVersionParser.getVersion();
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
-        File universal = new File(new File(mmcDir, "libraries"), "cleanroom-" + version + "-universal.jar");
+        File libraries = new File(mmcDir, "libraries");
+        File universal = new File(libraries, "cleanroom-0.3.0-alpha-universal.jar");
         mmcDir.mkdir();
         File pack = new File(mmcDir, "mmcpack.zip");
         if (!pack.exists()) {
             if (!Config.useLocalPack) {
+                String version = CleanroomVersionParser.getVersion();
+                universal = new File(libraries, "cleanroom-" + version + "-universal.jar");
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                 Initializer.getSubStatusLabel().setText("Downloading MMC pack with version " + version);
                 Downloader.downloadUntilSucceed(new URL("https://github.com/CleanroomMC/Cleanroom/releases/download/" + version + "/Cleanroom-MMC-instance-" + version + ".zip"), "", pack);
@@ -53,13 +55,16 @@ public class MMCPackDownloader {
                 if (entry.getName().equals(".packignore") || entry.getName().equals("instance.cfg")) {
                     continue;
                 }
+                if (entry.getName().endsWith(".jar")) {
+                    universal = new File(libraries, entry.getName());
+                }
                 File entryDestination = new File(mmcDir, entry.getName());
                 if (entry.isDirectory()) {
                     entryDestination.mkdirs();
                 } else {
                     entryDestination.getParentFile().mkdirs();
                     try (InputStream in = zipFile.getInputStream(entry);
-                         OutputStream out = Files.newOutputStream(entryDestination.toPath())) {
+                        OutputStream out = Files.newOutputStream(entryDestination.toPath())) {
                         IOUtils.copy(in, out);
                     }
                 }
