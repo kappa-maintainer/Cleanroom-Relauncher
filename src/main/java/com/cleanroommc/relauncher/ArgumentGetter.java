@@ -1,6 +1,7 @@
 package com.cleanroommc.relauncher;
 
-import net.minecraft.launchwrapper.Launch;
+import net.minecraft.launchwrapper.LaunchClassLoader;
+import net.minecraftforge.fml.ExitWrapper;
 
 import java.io.File;
 import java.net.URL;
@@ -10,10 +11,13 @@ import java.util.List;
 
 public class ArgumentGetter {
     public static List<String> getLaunchArgs() {
-        URL vanillaJar = Launch.classLoader.getSources().stream().filter(url -> {
-            String path = url.getPath();
-            return  !path.contains("libraries") && !path.contains("files-2.1") && (path.contains("versions") || path.endsWith("recompiled_minecraft-1.12.2.jar"));
-        }).findFirst().get();
+        URL vanillaJar = null;
+        try {
+            vanillaJar = Class.forName("net.minecraft.client.ClientBrandRetriever", false, LaunchClassLoader.class.getClassLoader()).getProtectionDomain().getCodeSource().getLocation();
+        } catch (ClassNotFoundException e) {
+            Relauncher.LOGGER.error("Can't get vanilla jar, impossible to relaunch");
+            ExitWrapper.exit(1);
+        }
         Relauncher.LOGGER.info("Vanilla jar detected: {}", vanillaJar.getFile());
         List<String> result = new ArrayList<>();
         result.add(Config.javaPath);
