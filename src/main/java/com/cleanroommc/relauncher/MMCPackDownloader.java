@@ -56,7 +56,12 @@ public class MMCPackDownloader {
                     continue;
                 }
                 if (entry.getName().endsWith(".jar")) {
-                    universal = new File(libraries, entry.getName());
+                    Relauncher.LOGGER.info("Universal jar: {}", entry.getName());
+                    String name = entry.getName();
+                    if (name.startsWith("libraries")) {
+                        name = name.substring(9);
+                    }
+                    universal = new File(libraries, name);
                 }
                 File entryDestination = new File(mmcDir, entry.getName());
                 if (entry.isDirectory()) {
