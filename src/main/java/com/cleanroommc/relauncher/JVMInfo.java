@@ -82,6 +82,6 @@ public class JVMInfo {
 
     @Override
     public String toString() {
-        return specification + "|" + arch + "|" + version + "|" + vendor + "|" + file.getAbsolutePath();
+        return specification + "|" + arch + "|" + version + "|" + vendor;
     }
 }

@@ -15,19 +15,18 @@ import javax.swing.JProgressBar;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.Color;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ItemEvent;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -184,8 +183,7 @@ public class Initializer {
 
         detectJvmButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(detectJvmButton)) {
-                JDialog detect = getDetectorDialog(pathText, verifyButton);
-                detect.setVisible(true);
+                showDetectorDialog(pathText, verifyButton);
             }
         });
 
@@ -443,14 +441,12 @@ public class Initializer {
         mainFrame.setVisible(false);
     }
 
-    private static JDialog getDetectorDialog(JTextField pathField, JButton verify) {
+    private static void showDetectorDialog(JTextField pathField, JButton verify) {
         JDialog detector = new JDialog();
         detector.setLayout(new GridBagLayout());
         DefaultListModel<JVMInfo> model = new DefaultListModel<>();
-        for (JVMInfo i : JavaDetector.getInstalledJVMs()) {
-            model.addElement(i);
-        }
-        JList<JVMInfo> list = new JList<JVMInfo>(model);
+        JList<JVMInfo> list = new JList<>(model);
+        JLabel info = new JLabel("Idle");
         JButton confirm = new JButton("Confirm");
         JButton cancel = new JButton("Cancel");
 
@@ -458,25 +454,32 @@ public class Initializer {
         c.fill = GridBagConstraints.CENTER;
         c.gridx = 0;
         c.gridy = 0;
-        c.gridwidth = 2;
+        c.gridwidth = 3;
         c.gridheight = 4;
+        c.ipady = 100;
+        c.ipadx = 100;
         detector.add(list, c);
         c.fill = GridBagConstraints.HORIZONTAL;
+        c.ipady = 0;
+        c.ipadx = 0;
         c.gridy = 4;
         c.gridheight = 1;
-        c.gridwidth = 1;
+        detector.add(info, c);
+        c.gridy = 5;
+        c.gridwidth = 2;
         detector.add(cancel, c);
-        c.gridx = 1;
+        c.gridx = 2;
+        c.gridwidth = 1;
         detector.add(confirm, c);
 
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         list.setLayoutOrientation(JList.VERTICAL);
         list.setVisibleRowCount(-1);
-
-        detector.pack();
-        detector.setResizable(false);
-        detector.setAlwaysOnTop(true);
-        GUIUtils.setCentral(detector);
+        list.addListSelectionListener(listSelectionEvent -> {
+            String path = list.getSelectedValue().getFile().getAbsolutePath();
+            info.setText(path);
+            info.setToolTipText(path);
+        });
 
 
         cancel.addActionListener(actionEvent -> {
@@ -494,7 +497,32 @@ public class Initializer {
         });
 
 
-        return detector;
+
+        cancel.setEnabled(false);
+        confirm.setEnabled(false);
+        info.setText("Scanning...");
+        Relauncher.LOGGER.info("Scanning...");
+        detector.pack();
+        GUIUtils.setCentral(detector);
+        detector.setAlwaysOnTop(true);
+        detector.setVisible(true);
+
+        Thread scan = new Thread(() -> {
+            for (JVMInfo i : JavaDetector.getInstalledJVMs()) {
+                model.addElement(i);
+            }
+            cancel.setEnabled(true);
+            confirm.setEnabled(true);
+            info.setText("Scan complete.");
+            detector.pack();
+            GUIUtils.setCentral(detector);
+        });
+        scan.start();
+
+
+
+
+
 
     }
 
