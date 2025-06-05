@@ -99,8 +99,9 @@ public class MMCInstaller {
                         try {
                             MMCPackDownloader.downloadAndExtract();
                             mainStatusLabel.setText("Installing Cleanroom...");
-                            File packDir = new File(Relauncher.workingDir, "mmcpack");
+                            File packDir = new File(Relauncher.workingDir, "mmcpack").getAbsoluteFile();
                             File instance = Launch.minecraftHome.getParentFile();
+                            Relauncher.LOGGER.info("Instance directory: {}", instance.getAbsolutePath());
                             File libraries = new File(instance, "libraries");
                             File patches = new File(instance, "patches");
                             libraries.mkdirs();

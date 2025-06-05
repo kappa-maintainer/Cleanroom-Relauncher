@@ -27,9 +27,18 @@ public class ArgumentGetter {
         }
         result.add("-cp");
         result.add(MMCPackParser.getClassPath() + new File(vanillaJar.getPath()));
-        List<String> origin = new ArrayList<>(Arrays.asList(System.getProperty("sun.java.command").split(" ")));
-        origin.remove(0);
+        String[] args = System.getProperty("sun.java.command").split(" -");
+        List<String> origin = new ArrayList<>();
         origin.add(0, "top.outlands.foundation.boot.Foundation");
+        for (String pair : args) {
+            if (pair.startsWith("-")) {
+                pair = "-" + pair;
+                int cut = pair.indexOf(" ");
+                origin.add(pair.substring(0, cut));
+                origin.add(pair.substring(cut + 1));
+
+            }
+        }
         result.addAll(origin);
         return result;
     }
