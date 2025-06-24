@@ -45,6 +45,7 @@ public class Relauncher implements IFMLLoadingPlugin {
                     Config.syncConfig();
                 } else {
                     Config.syncConfig();
+                    MMCPackDownloader.downloadAndExtract();
                     MMCPackParser.parseMMCPack();
                 }
                 if (Config.javaPath.isEmpty()) {
