@@ -29,7 +29,18 @@ public class CertFixer {
 
         CertificateFactory cf = CertificateFactory.getInstance("X.509");
 
-        String[] certs = new String[] {"e5-cross.der", "e6-cross.der", "isrg-root-x1-cross-signed.der", "isrg-root-x2-cross-signed.der", "r10.der", "r11.der", "azure.der", "azure2.der"};
+        String[] certs = new String[] {
+                "e5-cross.der",
+                "e6-cross.der",
+                "isrg-root-x1-cross-signed.der",
+                "isrg-root-x2-cross-signed.der",
+                "r10.der",
+                "r11.der",
+                "azure.der",
+                "azure2.der",
+                "azure3.der",
+                "azure4.der"
+        };
 
         for (String cert: certs){
             InputStream certStream = CertFixer.class.getResourceAsStream("/" + cert);
