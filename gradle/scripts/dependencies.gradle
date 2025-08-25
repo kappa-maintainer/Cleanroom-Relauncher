@@ -3,44 +3,30 @@ apply from: 'gradle/scripts/helpers.gradle'
 repositories {
     // Other repositories described by default:
     // CleanroomMC: https://maven.cleanroommc.com
-    exclusiveContent {
-        forRepository {
-            maven {
-                name 'CurseMaven'
-                url 'https://cursemaven.com'
-            }
-        }
-        filter {
-            includeGroup 'curse.maven'
-        }
+
+    maven {
+        name 'CurseMaven'
+        url 'https://cursemaven.com'
     }
-    exclusiveContent {
-        forRepository {
-            maven {
-                name 'Modrinth'
-                url 'https://api.modrinth.com/maven'
-            }
-        }
-        filter {
-            includeGroup 'maven.modrinth'
-        }
+    maven {
+        name 'Modrinth'
+        url 'https://api.modrinth.com/maven'
     }
+    maven {
+        url "https://repo.cleanroommc.com/releases"
+    }
+
     mavenCentral()
     maven { url 'https://jitpack.io' }
 }
 
 dependencies {
-    // Include StripLatestForgeRequirements by default for the dev env, saves everyone a hassle
-    runtimeOnly 'com.cleanroommc:strip-latest-forge-requirements:1.0'
-    // Include OSXNarratorBlocker by default for the dev env, for M1+ Macs
-    runtimeOnly 'com.cleanroommc:osxnarratorblocker:1.0'
-    embed ('com.github.axet:wget:1.7.0') {
-        exclude group: 'commons-io'
-    }
-    embed 'com.github.axet:threads:0.0.14'
-    embed 'org.json:json:20250107'
-    embed 'org.jsoup:jsoup:1.19.1'
-    embed 'com.cleanroommc:java-utils:1.1.2'
+    implementation("com.google.code.findbugs:jsr305:3.0.2")
+    shadow 'org.apache.httpcomponents.client5:httpclient5:5.5'
+    shadow 'org.apache.httpcomponents.core5:httpcore5-h2:5.3.4'
+    shadow 'org.apache.httpcomponents.core5:httpcore5:5.3.4'
+    shadow 'org.slf4j:slf4j-api:2.0.17'
+    shadow 'com.cleanroommc:java-utils:1.1.2'
 /*
     contain 'com.github.oshi:oshi-core:6.8.0'
     contain 'net.java.dev.jna:jna:5.17.0'
@@ -51,11 +37,6 @@ dependencies {
     // Example - Dependency descriptor:
     // 'com.google.code.gson:gson:2.8.6' << group: com.google.code.gson, name:gson, version:2.8.6
     // 'group:name:version:classifier' where classifier is optional
-
-    // Example - Deobfuscating dependencies:
-    // rfg.deobf('curse.maven:had-enough-items-557549:4543375')
-    // By wrapping a dependency descriptor in rfg.deobf() method call, the dependency is queued for deobfuscation
-    // When deobfuscating, RFG respects the mapping_channel + mapping_version stated in gradle.properties
 
     // Example - CurseMaven dependencies:
     // 'curse.maven:had-enough-items-557549:4543375' << had-enough-items = project slug, 557549 = project id, 4543375 = file id
@@ -70,7 +51,10 @@ dependencies {
     // runtimeOnly = runtime dependency
     // compileOnly = compile time dependency
     // annotationProcessor = annotation processing dependencies
-    // embed = bundle dependencies into final output artifact (no relocation)
+    // contain = bundle dependency jars into final artifact, will extract them in mod loading. Please only do this to non-mod dependencies.
+    // shadow = bundle dependencies into shadow output artifact (relocation configurable in shadowJar task)
+    // modImplementation = mod dependency available at both compile time and runtime
+    // modCompileOnly = mod dependency available only at compile time
 
     // Transitive dependencies:
     // (Dependencies that your dependency depends on)

@@ -1,11 +1,13 @@
 package com.cleanroommc.relauncher;
 
+import com.google.common.collect.Lists;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
 
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -24,6 +26,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.Color;
+import java.awt.Dimension;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.event.ItemEvent;
@@ -32,6 +35,8 @@ import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Vector;
 import java.util.function.Consumer;
 
 public class Initializer {
@@ -39,37 +44,35 @@ public class Initializer {
     private static final String invalid = "Invalid JVM X";
     private static final String toBeVerify = "Verify JVM";
     private static volatile boolean verified = false;
-    private static Color verifyButtonDefaultForeground;
     private static int argsTextHeight;
     private static final JLabel mainStatusLabel = new JLabel();
     private static final JProgressBar mainProgressbar = new JProgressBar();
-    private static final JLabel subStatusLabel = new JLabel();
-    private static final JProgressBar subProgressbar = new JProgressBar(0, 100);
     private static JButton confirmButton;
     private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
+    private static final String[] mirrors = new String[]{
+            "",
+            "https://maven.aliyun.com/repository/public",
+            "http://mirrors.163.com/maven/repository/maven-public",
+            "https://repo.huaweicloud.com/repository/maven",
+            "http://mirrors.cloud.tencent.com/nexus/repository/maven-public",
+            
+    };
+    
     public static void InitJavaAndArg() {
+        Config.syncConfig();
         mainFrame.setLayout(new GridBagLayout());
         GridBagConstraints c = new GridBagConstraints();
 
-        JLabel pathLabel = new JLabel("↓ Java Path ↓");
+        JLabel pathLabel = new JLabel("Java Path*");
         JTextField pathText = new JTextField();
         JFileChooser jvmPicker = getJavaFileChooser();
         JButton verifyButton = new JButton(toBeVerify);
         JButton detectJvmButton = new JButton("Detect Installed JVMs");
         JButton browserButton = new JButton("Browser...");
-        JLabel libraryPathLabel = new JLabel("↓ Library Path (optional) ↓");
-        JTextField libraryPathText = new JTextField();
-        JFileChooser libraryPicker = getLibraryPathChooser();
-        JCheckBox groupNameInPathCheckbox = new JCheckBox("Place Libraries in Group Name");
-        JButton libraryBrowserButton = new JButton("Browser...");
-        JLabel argsLabel = new JLabel("↓ Java Arguments ↓");
+        JLabel argsLabel = new JLabel("Java Args");
         JTextArea args = new JTextArea("-Xmx4g -Xms4g");
-        JCheckBox proxyCheckbox = new JCheckBox("Use Proxy");
-        JTextField proxyAddrTextField = new JTextField();
-        JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 65535, 1));
-        JCheckBox useLocalCheckbox = new JCheckBox("Use Local Pack");
-        JCheckBox multipartCheckbox = new JCheckBox("Enable Multipart");
+        JButton advSetting = new JButton("Advanced Settings");
 
         setInteractable = value -> {
             confirmButton.setEnabled(value);
@@ -77,91 +80,46 @@ public class Initializer {
             verifyButton.setEnabled(value);
             detectJvmButton.setEnabled(value);
             browserButton.setEnabled(value);
-            libraryPathText.setEnabled(value);
-            libraryBrowserButton.setEnabled(value);
-            groupNameInPathCheckbox.setEnabled(value);
             args.setEnabled(value);
-            proxyCheckbox.setEnabled(value);
-            if (!value || proxyCheckbox.isSelected()) {
-                proxyAddrTextField.setEnabled(value);
-                portSpinner.setEnabled(value);
-            }
-            useLocalCheckbox.setEnabled(value);
-            multipartCheckbox.setEnabled(value);
         };
 
         confirmButton = new JButton("Confirm");
-        confirmButton.setActionCommand("confirm");
         confirmButton.setEnabled(false);
 
         c.fill = GridBagConstraints.HORIZONTAL;
         c.gridx = 0;
         c.gridy = 0;
-        c.ipady = 10;
-        c.gridwidth = 3;
+        c.gridwidth = 1;
         mainFrame.add(pathLabel, c);
-        c.ipady = 0;
-        c.gridy = 1;
+        c.gridx = 1;
+        c.gridwidth = 3;
         mainFrame.add(pathText, c);
-        c.gridy = 2;
+        c.gridy = 1;
+        c.gridx = 0;
         c.gridwidth = 1;
         mainFrame.add(verifyButton, c);
         c.gridx = 1;
+        c.gridwidth = 2;
         mainFrame.add(detectJvmButton, c);
-        c.gridx = 2;
+        c.gridwidth = 1;
+        c.gridx = 3;
         mainFrame.add(browserButton, c);
-        c.gridwidth = 3;
-        c.gridx = 0;
-        c.gridy = 3;
-        mainFrame.add(libraryPathLabel, c);
-        c.gridy = 4;
-        mainFrame.add(libraryPathText, c);
-        c.gridy = 5;
-        c.gridwidth = 2;
-        mainFrame.add(groupNameInPathCheckbox, c);
-        c.gridx = 2;
         c.gridwidth = 1;
-        mainFrame.add(libraryBrowserButton, c);
         c.gridx = 0;
-        c.gridy = 6;
-        c.gridwidth = 3;
+        c.gridy = 2;
         mainFrame.add(argsLabel, c);
-        c.gridx = 0;
-        c.gridy = 7;
-        c.gridwidth = 3;
-        c.gridheight = 2;
-        mainFrame.add(args, c);
-        c.gridheight = 1;
-        c.gridx = 0;
-        c.gridy = 9;
-        c.gridwidth = 1;
-        c.fill = GridBagConstraints.CENTER;
-        mainFrame.add(useLocalCheckbox, c);
         c.gridx = 1;
-        mainFrame.add(multipartCheckbox, c);
-        c.gridx = 2;
-        mainFrame.add(proxyCheckbox, c);
-        c.gridx = 0;
-        c.gridy = 10;
-        c.gridwidth = 2;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        mainFrame.add(proxyAddrTextField, c);
-        c.gridx = 2;
-        c.gridwidth = 1;
-        mainFrame.add(portSpinner, c);
-        c.gridx = 0;
-        c.gridy = 11;
         c.gridwidth = 3;
-        c.ipady = 10;
+        mainFrame.add(args, c);
+        c.gridy = 4;
+        c.gridx = 0;
+        c.gridwidth = 4;
+        mainFrame.add(advSetting,c);
+        c.gridy = 5;
         mainFrame.add(mainStatusLabel, c);
-        c.gridy = 12;
+        c.gridy = 6;
         mainFrame.add(mainProgressbar, c);
-        c.gridy = 13;
-        mainFrame.add(subStatusLabel, c);
-        c.gridy = 14;
-        mainFrame.add(subProgressbar, c);
-        c.gridy = 15;
-        c.ipady = 0;
+        c.gridy = 7;
         mainFrame.add(confirmButton, c);
 
         mainFrame.setTitle("Relauncher Initialization Settings");
@@ -172,39 +130,30 @@ public class Initializer {
                 ExitWrapper.exit(0);
             }
         });
-        GUIUtils.enlargeFont(pathLabel);
+        
         pathLabel.setHorizontalAlignment(JLabel.CENTER);
         pathText.setToolTipText("Input your Java 21+ executable here");
-
-        GUIUtils.enlargeFont(libraryPathLabel);
-        libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
-
-        libraryPathText.setToolTipText("Path to place the libraries, leave it empty to use default location");
 
         detectJvmButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(detectJvmButton)) {
                 showDetectorDialog(pathText, verifyButton);
             }
         });
+        
+        pathText.setText(Config.javaPath);
+        args.setText(Config.jvmArgs);
+        
+        advSetting.addActionListener(actionEvent -> showAdvancedSettingDialog());
 
         confirmButton.addActionListener(actionEvent -> {
-            if (actionEvent.getActionCommand().equals("confirm")) {
+            if (actionEvent.getSource().equals(confirmButton)) {
                 if (verified || isJavaNewerThan21(pathText.getText())) {
                     Relauncher.LOGGER.info("Java valid and saved");
                     setInteractable.accept(false);
-                    Config.javaPathDefault = pathText.getText();
-                    Config.jvmArgsDefault = args.getText();
-                    Config.proxyAddrDefault = proxyAddrTextField.getText().replace('\n', ' ');
-                    Config.proxyPortDefault = (int) portSpinner.getValue();
-                    Config.useLocalPackDefault = useLocalCheckbox.isSelected();
-                    Config.enableMultipartDownloadDefault = multipartCheckbox.isSelected();
-                    Config.respectLibraryStructureDefault = groupNameInPathCheckbox.isSelected();
-                    Config.libraryPathDefault = libraryPathText.getText();
-
-                    Config.syncOnly();
+                    Config.javaPath = pathText.getText();
+                    Config.jvmArgs = args.getText();
 
                     mainProgressbar.setIndeterminate(false);
-                    subProgressbar.setIndeterminate(false);
 
                     try {
                         Thread workingThread = new Thread(() -> {
@@ -226,7 +175,6 @@ public class Initializer {
                         mainStatusLabel.setText(t.getMessage());
                         setInteractable.accept(true);
                         mainProgressbar.setIndeterminate(true);
-                        subProgressbar.setIndeterminate(true);
                     }
                 } else {
                     Relauncher.LOGGER.warn("Invalid Java");
@@ -237,10 +185,8 @@ public class Initializer {
         });
 
 
-        verifyButtonDefaultForeground = verifyButton.getForeground();
-        verifyButton.setActionCommand("verify");
         verifyButton.addActionListener(actionEvent -> {
-            if (actionEvent.getActionCommand().equals("verify")) {
+            if (actionEvent.getSource().equals(verifyButton)) {
                 if (isJavaNewerThan21(pathText.getText())) {
                     verified = true;
                     verifyButton.setText(valid);
@@ -274,32 +220,17 @@ public class Initializer {
             }
 
             private void onChange() {
-                verified = false;
-                verifyButton.setText(toBeVerify);
-                verifyButton.setForeground(verifyButtonDefaultForeground);
-                confirmButton.setEnabled(false);
+                verifyButton.doClick();
             }
         });
-
-        browserButton.setActionCommand("browser");
+        
         browserButton.addActionListener(actionEvent -> {
-            if (actionEvent.getActionCommand().equals("browser")) {
+            if (actionEvent.getSource().equals(browserButton)) {
                 GUIUtils.setCentral(jvmPicker);
                 int r = jvmPicker.showOpenDialog(mainFrame);
                 if (r == JFileChooser.APPROVE_OPTION) {
                     pathText.setText(jvmPicker.getSelectedFile().getAbsolutePath());
                     verifyButton.doClick();
-                }
-            }
-        });
-
-        libraryBrowserButton.setActionCommand("browser_library");
-        libraryBrowserButton.addActionListener(actionEvent -> {
-            if (actionEvent.getActionCommand().equals("browser_library")) {
-                GUIUtils.setCentral(libraryPicker);
-                int r = libraryPicker.showOpenDialog(mainFrame);
-                if (r == JFileChooser.APPROVE_OPTION) {
-                    libraryPathText.setText(libraryPicker.getSelectedFile().getAbsolutePath());
                 }
             }
         });
@@ -329,34 +260,11 @@ public class Initializer {
         });
 
         argsLabel.setHorizontalAlignment(JLabel.CENTER);
-        GUIUtils.enlargeFont(argsLabel);
-        useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");
-        multipartCheckbox.setToolTipText("Will enable multipart download, use when your network is slow");
-        multipartCheckbox.setSelected(true);
-        GUIUtils.enlargeFont(confirmButton);
-
-        proxyCheckbox.setToolTipText("Require Proxy Address & Port");
-        proxyCheckbox.addItemListener(itemEvent -> {
-            boolean selected = itemEvent.getStateChange() == ItemEvent.SELECTED;
-            portSpinner.setEnabled(selected);
-            proxyAddrTextField.setEnabled(selected);
-        });
-
-        proxyAddrTextField.setToolTipText("Proxy Address");
-        proxyAddrTextField.setEnabled(false);
-
-        portSpinner.setEnabled(false);
-        portSpinner.setToolTipText("Proxy Port");
-        portSpinner.setModel(new SpinnerNumberModel());
 
         mainProgressbar.setIndeterminate(true);
+        mainProgressbar.addChangeListener(changeEvent -> mainStatusLabel.setText(String.format("%d/%d", mainProgressbar.getValue(), mainProgressbar.getMaximum())));
         mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
         mainStatusLabel.setText("Idle");
-        subProgressbar.setIndeterminate(true);
-        subProgressbar.setMaximum(100);
-        subProgressbar.setMinimum(0);
-        subStatusLabel.setHorizontalAlignment(JTextField.CENTER);
-        subStatusLabel.setText("Idle");
 
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
@@ -420,15 +328,7 @@ public class Initializer {
     public static JProgressBar getMainProgressbar() {
         return mainProgressbar;
     }
-
-    public static JLabel getSubStatusLabel() {
-        return subStatusLabel;
-    }
-
-    public static JProgressBar getSubProgressbar() {
-        return subProgressbar;
-    }
-
+    
     public static JButton getConfirmButton() {
         return confirmButton;
     }
@@ -443,6 +343,7 @@ public class Initializer {
 
     private static void showDetectorDialog(JTextField pathField, JButton verify) {
         JDialog detector = new JDialog();
+        detector.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         detector.setLayout(new GridBagLayout());
         DefaultListModel<JVMInfo> model = new DefaultListModel<>();
         JList<JVMInfo> list = new JList<>(model);
@@ -481,22 +382,21 @@ public class Initializer {
             info.setToolTipText(path);
         });
 
-
         cancel.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(cancel)) {
                 detector.setVisible(false);
+                setGUIInteractable(true);
             }
         });
 
         confirm.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(confirm)) {
                 detector.setVisible(false);
+                setGUIInteractable(true);
                 pathField.setText(list.getSelectedValue().getFile().getAbsolutePath());
                 verify.doClick();
             }
         });
-
-
 
         cancel.setEnabled(false);
         confirm.setEnabled(false);
@@ -505,6 +405,7 @@ public class Initializer {
         detector.pack();
         GUIUtils.setCentral(detector);
         detector.setAlwaysOnTop(true);
+        setGUIInteractable(false);
         detector.setVisible(true);
 
         Thread scan = new Thread(() -> {
@@ -519,11 +420,141 @@ public class Initializer {
         });
         scan.start();
 
+    }
 
+    private static void showAdvancedSettingDialog() {
+        JDialog advSetting = new JDialog();
+        advSetting.setLayout(new GridBagLayout());
+        JLabel libraryPathLabel = new JLabel("Library Path");
+        JTextField libraryPathText = new JTextField();
+        libraryPathText.setText(Config.libraryPath);
+        JButton confirm = new JButton("Confirm");
+        JFileChooser libraryPicker = getLibraryPathChooser();
+        JCheckBox groupNameInPathCheckbox = new JCheckBox("Place Libraries in Group Name");
+        groupNameInPathCheckbox.setSelected(Config.respectLibraryStructure);
+        JButton libraryBrowserButton = new JButton("Browser...");
+        JLabel proxyLabel = new JLabel("Proxy");
+        JTextField proxyAddrTextField = new JTextField();
+        proxyAddrTextField.setText(Config.proxyAddr);
+        JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
+        JCheckBox useLocalCheckbox = new JCheckBox("Use Local Pack");
+        useLocalCheckbox.setSelected(Config.useLocalPack);
+        JLabel mirrorLabel = new JLabel("Maven Mirror");
+        JComboBox<String> mirrorList = new JComboBox<>(new Vector<>(Lists.newArrayList(mirrors)));
+        mirrorList.setSelectedItem(Config.replaceMavenURL);
+        JLabel maxRetryLabel = new JLabel("Max connection attempts");
+        JSpinner maxRetrySpinner = new JSpinner(new SpinnerNumberModel(Config.maxRetry, 1, 65535, 1));
+        JLabel maxSessionLabel = new JLabel("Max concurrent download sessions");
+        JSpinner maxSessionSpinner = new JSpinner(new SpinnerNumberModel(Config.maxDownloadSession, 1, 65535, 1));
 
+        libraryPathText.setToolTipText("Path to place the libraries, leave it empty to use default location");
 
+        GridBagConstraints c =new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.gridx = 0;
+        c.gridy = 0;
+        c.gridheight = 1;
+        c.gridwidth = 1;
+        advSetting.add(libraryPathLabel, c);
+        c.gridx = 1;
+        c.gridwidth = 2;
+        advSetting.add(libraryPathText, c);
+        c.gridx = 3;
+        c.gridwidth = 1;
+        advSetting.add(libraryBrowserButton, c);
+        c.gridy = 1;
+        c.gridx = 0;
+        c.gridwidth = 1;
+        advSetting.add(proxyLabel, c);
+        c.gridwidth = 2;
+        c.gridx = 1;
+        advSetting.add(proxyAddrTextField, c);
+        c.gridwidth = 1;
+        c.gridx = 3;
+        advSetting.add(portSpinner, c);
+        c.gridx = 0;
+        c.gridy = 2;
+        c.gridwidth = 1;
+        advSetting.add(mirrorLabel, c);
+        c.gridx = 1;
+        c.gridwidth = 3;
+        advSetting.add(mirrorList, c);
+        c.gridy = 3;
+        c.gridwidth = 3;
+        c.gridx = 0;
+        advSetting.add(maxRetryLabel, c);
+        c.gridx = 3;
+        c.gridwidth = 1;
+        advSetting.add(maxRetrySpinner, c);
+        c.gridy = 4;
+        c.gridwidth = 3;
+        c.gridx = 0;
+        advSetting.add(maxSessionLabel, c);
+        c.gridx = 3;
+        c.gridwidth = 1;
+        advSetting.add(maxSessionSpinner, c);
+        c.gridy = 5;
+        c.gridx = 0;
+        c.gridwidth = 1;
+        advSetting.add(useLocalCheckbox, c);
+        c.gridx = 1;
+        advSetting.add(groupNameInPathCheckbox, c);
+        c.gridx = 0;
+        c.gridwidth = 4;
+        c.gridy = 6;
+        advSetting.add(confirm, c);
+        
+        groupNameInPathCheckbox.setToolTipText("Place libraries in their corresponding groups. Useful when you want to reuse libraries with the launcher.");
+        
+        mirrorList.setToolTipText("The mirror URL used to replace central maven. Currently only Chinese ISP may need this.");
 
+        
+        libraryBrowserButton.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(libraryBrowserButton)) {
+                GUIUtils.setCentral(libraryPicker);
+                int r = libraryPicker.showOpenDialog(mainFrame);
+                if (r == JFileChooser.APPROVE_OPTION) {
+                    libraryPathText.setText(libraryPicker.getSelectedFile().getAbsolutePath());
+                }
+            }
+        });
+        //libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
 
+        useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");
+
+        proxyAddrTextField.setToolTipText("Proxy Address, leave it empty means no proxy");
+        
+        portSpinner.setToolTipText("Proxy Port, leave it 0 means no proxy");
+        portSpinner.setModel(new SpinnerNumberModel());
+        
+        mirrorList.setEditable(true);
+        mirrorList.setMaximumSize(new Dimension(200, Integer.MAX_VALUE));
+        
+        confirm.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(confirm)) {
+                advSetting.setVisible(false);
+                setGUIInteractable(true);
+                Config.replaceMavenURL = (String) mirrorList.getSelectedItem();
+                Config.useLocalPack = useLocalCheckbox.isSelected();
+                Config.proxyPort = (int) portSpinner.getValue();
+                Config.proxyAddr = proxyAddrTextField.getText();
+                Config.maxDownloadSession = (int) maxSessionSpinner.getValue();
+                Config.maxRetry = (int) maxRetrySpinner.getValue();
+                Config.respectLibraryStructure = groupNameInPathCheckbox.isSelected();
+            }
+        });
+
+        advSetting.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+        advSetting.setAlwaysOnTop(true);
+        advSetting.pack();
+        GUIUtils.setCentral(advSetting);
+        advSetting.setResizable(false);
+        setGUIInteractable(false);
+        advSetting.setVisible(true);
+    }
+    
+    public synchronized static void addProgress() {
+        mainProgressbar.setValue(mainProgressbar.getValue() + 1);
     }
 
 }

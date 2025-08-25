@@ -44,33 +44,19 @@ public class MMCPackParser {
 
         Initializer.getMainProgressbar().setMaximum(result.size());
         Initializer.getMainProgressbar().setMinimum(0);
-
-        File libDir;
-        if (Config.libraryPath.isEmpty()) {
-            libDir = Relauncher.workingDir;
-        } else {
-            libDir = new File(Config.libraryPath);
-        }
-        for (int i = 0; i < result.size(); i++){
-            Triple<String, String, String> triple = result.get(i);
-            String[] a = triple.getMiddle().split("/");
-            String fileName = a[a.length - 1];
-            if (Config.respectLibraryStructure) {
-                String[] maven = triple.getLeft().split(":");
-                fileName = maven[0].replace('.', File.separatorChar) + File.separatorChar + maven[2] + File.separatorChar + fileName;
-                if (File.separatorChar == '\\') {
-                    fileName = fileName.replace("\\", "\\\\"); // I hate Windows
-                }
-            }
-            File libFile = new File(libDir, fileName);
-            Relauncher.LOGGER.info("Grabbing : {}", triple.getLeft());
-            Initializer.getMainProgressbar().setValue(i);
-            Initializer.getMainStatusLabel().setText("Grabbing " + i + "/" + result.size() + ": " + triple.getLeft().split(":")[1]);
-            Downloader.downloadUntilSucceed(new URL(triple.getMiddle()), triple.getRight(), libFile);
-            builder.append(libFile.getAbsolutePath()).append(File.pathSeparator);
-        }
+        
+        List<DownloadEntry> entries = new ArrayList<>();
+        result.forEach(triple -> {
+            DownloadEntry entry = new DownloadEntry(triple);
+            entries.add(entry);
+            builder.append(entry.getDestination().getAbsolutePath()).append(File.pathSeparator);
+        });
+        
+        Downloader.downloadAll(entries);
 
         cp += builder.toString();
+        
+        Config.classPath = cp;
 
     }
 
@@ -169,10 +155,6 @@ public class MMCPackParser {
         }
         Relauncher.LOGGER.info("LWJGL suffix: {}, os.arch: {}", suffix, osArch);
         return suffix;
-    }
-
-    public static String getClassPath() {
-        return cp;
     }
 
 }

@@ -26,7 +26,7 @@ public class ArgumentGetter {
             result.addAll(Arrays.asList(Config.jvmArgs.split(" ")));
         }
         result.add("-cp");
-        result.add(MMCPackParser.getClassPath() + new File(vanillaJar.getPath()));
+        result.add(Config.classPath + new File(vanillaJar.getPath()));
         String[] args = System.getProperty("sun.java.command").split(" -");
         List<String> origin = new ArrayList<>();
         origin.add(0, "top.outlands.foundation.boot.Foundation");

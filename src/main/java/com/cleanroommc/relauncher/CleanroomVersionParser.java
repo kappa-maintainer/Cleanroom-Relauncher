@@ -5,6 +5,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 
 public class CleanroomVersionParser {
     private static String version = "";
@@ -15,10 +17,17 @@ public class CleanroomVersionParser {
         Relauncher.LOGGER.info("Parsing latest Cleanroom versions");
         Initializer.getMainStatusLabel().setText("Parsing latest Cleanroom versions");
         File metadata = new File(Relauncher.workingDir, "maven-metadata.xml");
-        String version = "0.3.0-alpha";
+        String version = "0.3.13-alpha";
 
         Relauncher.LOGGER.info("Downloading metadata");
-        Downloader.downloadUntilSucceed(new URL("https://maven.arcseekers.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), "", metadata);
+        List<DownloadEntry> list = new ArrayList<>(1);
+        list.add(new DownloadEntry(new URL("https://maven.arcseekers.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), metadata, ""));
+        try {
+            Downloader.downloadAll(list);
+        } catch (Exception e) {
+            Relauncher.LOGGER.error(e);
+            throw new RuntimeException(e);
+        }
         BufferedReader reader = Files.newBufferedReader(metadata.toPath());
         while (reader.ready()) {
             String temp;

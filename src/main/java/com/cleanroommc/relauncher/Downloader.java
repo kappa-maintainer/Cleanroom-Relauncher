@@ -1,95 +1,75 @@
 package com.cleanroommc.relauncher;
 
-import com.github.axet.wget.WGet;
-import com.github.axet.wget.info.BrowserInfo;
-import com.github.axet.wget.info.DownloadInfo;
-import com.github.axet.wget.info.ProxyInfo;
-import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.HttpHost;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.URL;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Arrays;
+import java.util.List;
+import java.util.PriorityQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Downloader {
-    private static ProxyInfo proxyInfo = null;
+    private static final PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+    private static final HttpClientBuilder builder;
+    private static final PriorityQueue<DownloadEntry> queue = new PriorityQueue<>();
     static {
-        BrowserInfo.USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36";
-        // Fxxk mojang's 8u51
-        if (!Strings.isNullOrEmpty(Config.proxyAddr) && Config.proxyPort > 0) {
-            proxyInfo = new ProxyInfo(Config.proxyAddr, Config.proxyPort);
-        }
+        connManager.setMaxTotal(Config.maxDownloadSession);
+        
+        if (!Config.proxyAddr.isEmpty() && Config.proxyPort != 0)
+            builder = HttpClients.custom().setConnectionManager(connManager).setConnectionManagerShared(true).setProxy(new HttpHost(Config.proxyAddr, Config.proxyPort));
+        else 
+            builder = HttpClients.custom().setConnectionManager(connManager).setConnectionManagerShared(true);
     }
-    public static void downloadUntilSucceed(URL url, String sha1, File destination) throws IOException {
-        boolean succeed = false;
-        Initializer.getSubProgressbar().setValue(0);
-        if (!destination.exists()) {
-            while (!succeed) {
-                downloadWithWget(url, destination);
-                if (!Strings.isNullOrEmpty(sha1)) {
-                    if (calculateSHA1(destination, sha1)) {
-                        succeed = true;
-                        Relauncher.LOGGER.info("Downloaded and verified file: {}", destination.getName());
-                    }
-                } else {
-                    succeed = true;
+    public static void downloadAll(List<DownloadEntry> list) {
+        Initializer.getMainProgressbar().setMaximum(list.size());
+        try (CloseableHttpClient client = builder.build()) {
+            while (!list.isEmpty() || !queue.isEmpty()) {
+                while (!queue.isEmpty()) {
+                    list.add(queue.poll());
                 }
-            }
-        } else {
-            if (!Strings.isNullOrEmpty(sha1)) {
-                if (!calculateSHA1(destination, sha1)) {
-                    while (!succeed) {
-                        downloadWithWget(url, destination);
-                        if (calculateSHA1(destination, sha1)) {
-                            succeed = true;
-                            Relauncher.LOGGER.info("Found and verified cached file: {}", destination.getName());
-                        }
+                ExecutorService pool = Executors.newFixedThreadPool(Config.maxDownloadSession);
+                AtomicInteger i = new AtomicInteger();
+                while (!list.isEmpty()){
+                    DownloadEntry entry = list.remove(0);
+                    try {
+                        HttpGet httpGet = new HttpGet(entry.getUrl().toURI());
+                        pool.submit(new DownloadThread(client, httpGet, i.getAndIncrement(), entry));
+                    } catch (URISyntaxException e) {
+                        Relauncher.LOGGER.error(e);
+                        // no-op
                     }
                 }
+                pool.shutdown();
+                pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
             }
+        } catch (IOException | InterruptedException e) {
+            Relauncher.LOGGER.error(e);
         }
-
     }
-
-    private static void downloadWithWget(URL url, File destination) throws IOException {
-        Initializer.getSubStatusLabel().setText("Downloading " + destination.getName());
-        Files.createDirectories(destination.getParentFile().toPath());
-        AtomicBoolean stop = new AtomicBoolean(false);
-        DownloadInfo info;
-        if (proxyInfo == null) {
-            info = new DownloadInfo(url);
-        } else {
-            info = new DownloadInfo(url, proxyInfo);
-        }
-        Runnable setProgress = () -> {
-            int progress;
-            if (info.getLength() != null) {
-                progress = (int) ((float)info.getDownloaded() / (float)info.getLength() * 100.0F);
-            } else {
-                progress = 0;
-            }
-            SwingUtilities.invokeLater(() -> Initializer.getSubProgressbar().setValue(progress));
-        };
-        info.extract(stop, setProgress);
-        if (Config.enableMultipartDownload) {
-            try {
-                info.enableMultipart();
-            } catch (Throwable t) {
-                Relauncher.LOGGER.info("File {}'s host not supporting multipart download", destination.getName());
-                SwingUtilities.invokeLater(() -> Initializer.getSubProgressbar().setIndeterminate(true));
-            }
-        }
-        WGet w = new WGet(info, destination);
-
-        w.download(stop, setProgress);
-        SwingUtilities.invokeLater(() -> Initializer.getSubProgressbar().setIndeterminate(false));
-    }
+    
 
     private static boolean calculateSHA1(File dest, String sha1) {
-        Initializer.getSubStatusLabel().setText("Verifying file " + dest.getName());
+        if (sha1.isEmpty()) {
+            return true;
+        }
         try {
             boolean match = DigestUtils.sha1Hex(Files.newInputStream(dest.toPath())).equals(sha1);
             if (!match) {
@@ -99,6 +79,63 @@ public class Downloader {
         } catch (IOException e) {
             Relauncher.LOGGER.warn("Caught error in SHA1 calculation of file {}, re-downloading", dest, e);
             return false;
+        }
+    }
+    
+    private static class DownloadThread extends Thread {
+        private final CloseableHttpClient httpClient;
+        private final HttpGet httpget;
+        private final DownloadEntry entry;
+
+        public DownloadThread(CloseableHttpClient httpClient, HttpGet httpget, int id, DownloadEntry entry) {
+            this.httpClient = httpClient;
+            this.httpget = httpget;
+            setName("Download thread#" + id);
+            this.entry = entry;
+        }
+        @Override
+        public void run() {
+            Relauncher.LOGGER.info("Checking {}...", entry.getDestination());
+            if (entry.getDestination().exists()) {
+                if (calculateSHA1(entry.getDestination(), entry.getSha1())) {
+                    Relauncher.LOGGER.info("File {} already exist, skipping", entry.getDestination());
+                    Initializer.addProgress();
+                    return;
+                }
+            } else {
+                try {
+                    Files.createDirectories(entry.getDestination().getParentFile().toPath());
+                } catch (IOException e) {
+                    Relauncher.LOGGER.error("Create file failed.");
+                    Relauncher.LOGGER.error(e.getMessage());
+                }
+            }
+            try{
+                //Executing the request
+                ClassicHttpResponse httpresponse = httpClient.execute(httpget, response -> {
+                    try (FileOutputStream outputStream = new FileOutputStream(entry.getDestination())) {
+                        IOUtils.copy(response.getEntity().getContent(), outputStream);
+                    }
+                    httpClient.close();
+                    return (CloseableHttpResponse) response;
+                });
+                if (!entry.getSha1().isEmpty()) {
+                    if (!calculateSHA1(entry.getDestination(), entry.getSha1())) {
+                        Relauncher.LOGGER.info("Downloaded file {} has invalid checksum, re-downloading...", entry.getDestination());
+                        if (entry.failed() >= Config.maxRetry) {
+                            Relauncher.LOGGER.error("Download {} reached max attempts", entry.getDestination());
+                            throw new RuntimeException("Max retry reached");
+                        } else {
+                            queue.add(entry);
+                        }
+                    } else {
+                        Initializer.addProgress();
+                    }
+                }
+                
+            }catch(Exception e) {
+                Relauncher.LOGGER.error(e);
+            }
         }
     }
 }

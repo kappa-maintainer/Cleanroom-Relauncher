@@ -6,12 +6,16 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -19,7 +23,7 @@ public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
         File libraries = new File(mmcDir, "libraries");
-        File universal = new File(libraries, "cleanroom-0.3.0-alpha-universal.jar");
+        File universal = new File(libraries, "cleanroom-0.3.13-alpha-universal.jar");
         mmcDir.mkdir();
         File pack = new File(mmcDir, "mmcpack.zip");
         if (!pack.exists()) {
@@ -27,8 +31,9 @@ public class MMCPackDownloader {
                 String version = CleanroomVersionParser.getVersion();
                 universal = new File(libraries, "cleanroom-" + version + "-universal.jar");
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
-                Initializer.getSubStatusLabel().setText("Downloading MMC pack with version " + version);
-                Downloader.downloadUntilSucceed(new URL("https://github.com/CleanroomMC/Cleanroom/releases/download/" + version + "/Cleanroom-MMC-instance-" + version + ".zip"), "", pack);
+                List<DownloadEntry> list = new ArrayList<>(1);
+                list.add(new DownloadEntry(new URL("https://github.com/CleanroomMC/Cleanroom/releases/download/" + version + "/Cleanroom-MMC-instance-" + version + ".zip"), pack, ""));
+                Downloader.downloadAll(list);
             } else {
                 if (Relauncher.workingDir.listFiles() != null) {
                     Optional<File> packfile = Arrays.stream(Relauncher.workingDir.listFiles()).filter(file -> file.getName().startsWith("Cleanroom-MMC-instance-") && file.getName().endsWith(".zip")).findFirst();

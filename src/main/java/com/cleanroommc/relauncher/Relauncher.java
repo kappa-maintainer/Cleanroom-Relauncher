@@ -39,26 +39,22 @@ public class Relauncher implements IFMLLoadingPlugin {
                 MMCInstaller.showGUI();
             } else {
                 LOGGER.info("Checking config");
-                if (!Files.exists(new File(new File(Launch.minecraftHome, "config"), "cleanroom_relauncher.cfg").toPath())) {
-                    LOGGER.info("No config found, asking for input");
-                    Initializer.InitJavaAndArg();
+                boolean configExists = Files.exists(new File(new File(Launch.minecraftHome, "config"), "cleanroom_relauncher.cfg").toPath());
+                if (configExists) {
                     Config.syncConfig();
                 } else {
-                    Config.syncConfig();
-                    MMCPackDownloader.downloadAndExtract();
-                    MMCPackParser.parseMMCPack();
+                    LOGGER.info("No config found, creating...");
                 }
-                if (Config.javaPath.isEmpty()) {
-                    LOGGER.info("Java path empty, resetting");
-                    Files.delete(Config.configFile.toPath());
+                if (!Config.booted) {
                     Initializer.InitJavaAndArg();
                 }
                 Initializer.hideWindow();
                 List<String> args = ArgumentGetter.getLaunchArgs();
                 ProcessBuilder relaunch = new ProcessBuilder(args);
                 try {
-
                     Process p = relaunch.directory(Launch.minecraftHome).inheritIO().start();
+                    Config.booted = true;
+                    Config.save();
                     Runtime.getRuntime().addShutdownHook(new Thread(p::destroy));
                     BufferedReader inputReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     BufferedReader errorReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
