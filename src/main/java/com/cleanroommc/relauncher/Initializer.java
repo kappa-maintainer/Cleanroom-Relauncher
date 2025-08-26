@@ -1,6 +1,7 @@
 package com.cleanroommc.relauncher;
 
 import com.google.common.collect.Lists;
+import net.miginfocom.swing.MigLayout;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
 
@@ -15,41 +16,36 @@ import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JProgressBar;
 import javax.swing.JSpinner;
-import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
-import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Vector;
 import java.util.function.Consumer;
 
 public class Initializer {
-    private static final String valid = "Valid JVM ✔";
-    private static final String invalid = "Invalid JVM X";
-    private static final String toBeVerify = "Verify JVM";
+    private static final String valid = "✔";
+    private static final String invalid = "❌";
     private static volatile boolean verified = false;
-    private static int argsTextHeight;
     private static final JLabel mainStatusLabel = new JLabel();
     private static final JProgressBar mainProgressbar = new JProgressBar();
-    private static JButton confirmButton;
+    private static JButton launchButton;
     private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
+    private static Runnable verifyJVM;
     private static final String[] mirrors = new String[]{
             "",
             "https://maven.aliyun.com/repository/public",
@@ -61,66 +57,61 @@ public class Initializer {
     
     public static void InitJavaAndArg() {
         Config.syncConfig();
-        mainFrame.setLayout(new GridBagLayout());
-        GridBagConstraints c = new GridBagConstraints();
+        mainFrame.setLayout(new MigLayout("", "[grow][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
 
         JLabel pathLabel = new JLabel("Java Path*");
         JTextField pathText = new JTextField();
+        JLabel jvmStatus = new JLabel(invalid);
         JFileChooser jvmPicker = getJavaFileChooser();
-        JButton verifyButton = new JButton(toBeVerify);
-        JButton detectJvmButton = new JButton("Detect Installed JVMs");
+        JButton detectJvmButton = new JButton("Detect JVMs");
         JButton browserButton = new JButton("Browser...");
         JLabel argsLabel = new JLabel("Java Args");
         JTextField args = new JTextField();
         JButton advSetting = new JButton("Advanced Settings");
 
         setInteractable = value -> {
-            confirmButton.setEnabled(value);
+            launchButton.setEnabled(value);
             pathText.setEnabled(value);
-            verifyButton.setEnabled(value);
             detectJvmButton.setEnabled(value);
             browserButton.setEnabled(value);
             args.setEnabled(value);
         };
 
-        confirmButton = new JButton("Confirm");
-        confirmButton.setEnabled(false);
-
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.gridwidth = 1;
-        mainFrame.add(pathLabel, c);
-        c.gridx = 1;
-        c.gridwidth = 3;
-        mainFrame.add(pathText, c);
-        c.gridy = 1;
-        c.gridx = 0;
-        c.gridwidth = 1;
-        mainFrame.add(verifyButton, c);
-        c.gridx = 1;
-        c.gridwidth = 2;
-        mainFrame.add(detectJvmButton, c);
-        c.gridwidth = 1;
-        c.gridx = 3;
-        mainFrame.add(browserButton, c);
-        c.gridwidth = 1;
-        c.gridx = 0;
-        c.gridy = 2;
-        mainFrame.add(argsLabel, c);
-        c.gridx = 1;
-        c.gridwidth = 3;
-        mainFrame.add(args, c);
-        c.gridy = 4;
-        c.gridx = 0;
-        c.gridwidth = 4;
-        mainFrame.add(advSetting,c);
-        c.gridy = 5;
-        mainFrame.add(mainStatusLabel, c);
-        c.gridy = 6;
-        mainFrame.add(mainProgressbar, c);
-        c.gridy = 7;
-        mainFrame.add(confirmButton, c);
+        launchButton = new JButton("Launch");
+        launchButton.setEnabled(false);
+        
+        mainFrame.add(pathLabel, "cell 0 0, grow");
+        pathLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(pathLabel);
+        mainFrame.add(pathText, "cell 1 0 2 1, grow");
+        pathText.setMinimumSize(new Dimension(300, 10));
+        GUIUtils.enlargeFont(pathText);
+        mainFrame.add(jvmStatus, "cell 3 0, grow");
+        jvmStatus.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(jvmStatus);
+        mainFrame.add(detectJvmButton, "cell 1 1, grow");
+        GUIUtils.enlargeFont(detectJvmButton);
+        mainFrame.add(browserButton, "cell 2 1, grow");
+        GUIUtils.enlargeFont(browserButton);
+        mainFrame.add(argsLabel, "cell 0 2, grow");
+        argsLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(argsLabel);
+        mainFrame.add(args, "cell 1 2 2 1, grow");
+        args.setMinimumSize(new Dimension(300, 10));
+        GUIUtils.enlargeFont(args);
+        mainFrame.add(advSetting, "cell 1 3 2 1, grow");
+        advSetting.setMinimumSize(new Dimension(300, 10));
+        GUIUtils.enlargeFont(advSetting);
+        mainFrame.add(mainStatusLabel, "cell 1 4 2 1, grow");
+        mainStatusLabel.setMinimumSize(new Dimension(300, 10));
+        mainStatusLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(mainStatusLabel);
+        mainFrame.add(mainProgressbar, "cell 1 5 2 1, grow");
+        mainProgressbar.setMinimumSize(new Dimension(300, 10));
+        GUIUtils.enlargeFont(mainProgressbar);
+        mainFrame.add(launchButton, "cell 1 6 2 1, grow");
+        launchButton.setMinimumSize(new Dimension(300, 10));
+        GUIUtils.enlargeFont(launchButton, Font.BOLD, 20);
 
         mainFrame.setTitle("Relauncher Initialization Settings");
         mainFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -136,7 +127,7 @@ public class Initializer {
 
         detectJvmButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(detectJvmButton)) {
-                showDetectorDialog(pathText, verifyButton);
+                showDetectorDialog(pathText);
             }
         });
         
@@ -145,8 +136,8 @@ public class Initializer {
         
         advSetting.addActionListener(actionEvent -> showAdvancedSettingDialog());
 
-        confirmButton.addActionListener(actionEvent -> {
-            if (actionEvent.getSource().equals(confirmButton)) {
+        launchButton.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(launchButton)) {
                 if (verified || isJavaNewerThan21(pathText.getText())) {
                     Relauncher.LOGGER.info("Java valid and saved");
                     setInteractable.accept(false);
@@ -171,37 +162,35 @@ public class Initializer {
                     } catch (Throwable t) {
                         Relauncher.LOGGER.error(t.getMessage());
                         Arrays.stream(t.getStackTrace()).forEach(Relauncher.LOGGER::info);
-                        Config.configFile.delete();
                         mainStatusLabel.setText(t.getMessage());
                         setInteractable.accept(true);
                         mainProgressbar.setIndeterminate(true);
                     }
                 } else {
                     Relauncher.LOGGER.warn("Invalid Java");
-                    confirmButton.setEnabled(false);
-                    verifyButton.doClick();
+                    launchButton.setEnabled(false);
+                    verifyJVM.run();
                 }
             }
         });
+        
+        verifyJVM = () -> {
+            if (isJavaNewerThan21(pathText.getText())) {
+                verified = true;
+                jvmStatus.setText(valid);
+                jvmStatus.setForeground(Color.GREEN);
 
+                launchButton.setEnabled(true);
+            } else {
+                verified = false;
+                jvmStatus.setText(invalid);
+                jvmStatus.setForeground(Color.RED);
 
-        verifyButton.addActionListener(actionEvent -> {
-            if (actionEvent.getSource().equals(verifyButton)) {
-                if (isJavaNewerThan21(pathText.getText())) {
-                    verified = true;
-                    verifyButton.setText(valid);
-                    verifyButton.setForeground(Color.GREEN);
-
-                    confirmButton.setEnabled(true);
-                } else {
-                    verified = false;
-                    verifyButton.setText(invalid);
-                    verifyButton.setForeground(Color.RED);
-
-                    confirmButton.setEnabled(false);
-                }
+                launchButton.setEnabled(false);
             }
-        });
+        };
+
+        verifyJVM.run();
 
         pathText.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -220,7 +209,8 @@ public class Initializer {
             }
 
             private void onChange() {
-                verifyButton.doClick();
+                verifyJVM.run();
+                pathText.setToolTipText(pathText.getText());
             }
         });
         
@@ -230,7 +220,7 @@ public class Initializer {
                 int r = jvmPicker.showOpenDialog(mainFrame);
                 if (r == JFileChooser.APPROVE_OPTION) {
                     pathText.setText(jvmPicker.getSelectedFile().getAbsolutePath());
-                    verifyButton.doClick();
+                    verifyJVM.run();
                 }
             }
         });
@@ -238,40 +228,36 @@ public class Initializer {
         args.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent documentEvent) {
-                adjustSize();
+                onChange();
             }
 
             @Override
             public void removeUpdate(DocumentEvent documentEvent) {
-                adjustSize();
+                onChange();
             }
 
             @Override
             public void changedUpdate(DocumentEvent documentEvent) {
-                adjustSize();
+                onChange();
             }
 
-            private void adjustSize() {
-                if (args.getHeight() != argsTextHeight) {
-                    argsTextHeight = args.getHeight();
-                    mainFrame.pack();
-                }
+            private void onChange() {
+                args.setToolTipText(pathText.getText());
             }
         });
 
         argsLabel.setHorizontalAlignment(JLabel.CENTER);
 
         mainProgressbar.setIndeterminate(true);
-        mainProgressbar.addChangeListener(changeEvent -> mainStatusLabel.setText(String.format("%d/%d", mainProgressbar.getValue(), mainProgressbar.getMaximum())));
+        mainProgressbar.addChangeListener(changeEvent -> mainStatusLabel.setText(String.format("Downloading: %d/%d", mainProgressbar.getValue(), mainProgressbar.getMaximum())));
         mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
-        mainStatusLabel.setText("Idle");
+        mainStatusLabel.setText("Status: Idle");
 
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
         //mainFrame.setSize(GUIUtils.scaledWidth / 2, GUIUtils.scaledHeight / 4);
         mainFrame.pack();
-        argsTextHeight = args.getHeight();
-        mainFrame.setResizable(false);
+        //mainFrame.setResizable(false);
         GUIUtils.setCentral(mainFrame);
         mainFrame.setVisible(true);
         synchronized (Relauncher.o) {
@@ -329,8 +315,8 @@ public class Initializer {
         return mainProgressbar;
     }
     
-    public static JButton getConfirmButton() {
-        return confirmButton;
+    public static JButton getLaunchButton() {
+        return launchButton;
     }
 
     public static void setGUIInteractable(boolean enable) {
@@ -341,7 +327,7 @@ public class Initializer {
         mainFrame.setVisible(false);
     }
 
-    private static void showDetectorDialog(JTextField pathField, JButton verify) {
+    private static void showDetectorDialog(JTextField pathField) {
         JDialog detector = new JDialog();
         detector.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         detector.setLayout(new GridBagLayout());
@@ -394,7 +380,7 @@ public class Initializer {
                 detector.setVisible(false);
                 setGUIInteractable(true);
                 pathField.setText(list.getSelectedValue().getFile().getAbsolutePath());
-                verify.doClick();
+                verifyJVM.run();
             }
         });
 

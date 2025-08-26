@@ -27,6 +27,9 @@ dependencies {
     shadow 'org.apache.httpcomponents.core5:httpcore5:5.3.4'
     shadow 'org.slf4j:slf4j-api:2.0.17'
     shadow 'com.cleanroommc:java-utils:1.1.2'
+
+    shadow 'com.miglayout:miglayout-core:5.3'
+    shadow 'com.miglayout:miglayout-swing:5.3'
 /*
     contain 'com.github.oshi:oshi-core:6.8.0'
     contain 'net.java.dev.jna:jna:5.17.0'

@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -15,7 +14,6 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -42,12 +40,12 @@ public class MMCPackDownloader {
                         Files.copy(packfile.get().toPath(), pack.toPath());
                     } else {
                         Initializer.getMainStatusLabel().setText("Configured to use local mmc pack but can't find matched target");
-                        Initializer.getConfirmButton().setEnabled(true);
+                        Initializer.getLaunchButton().setEnabled(true);
                         return;
                     }
                 } else {
                     Initializer.getMainStatusLabel().setText("Configured to use local mmc pack but directory is empty");
-                    Initializer.getConfirmButton().setEnabled(true);
+                    Initializer.getLaunchButton().setEnabled(true);
                     return;
                 }
             }
