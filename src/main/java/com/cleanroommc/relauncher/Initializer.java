@@ -71,7 +71,7 @@ public class Initializer {
         JButton detectJvmButton = new JButton("Detect Installed JVMs");
         JButton browserButton = new JButton("Browser...");
         JLabel argsLabel = new JLabel("Java Args");
-        JTextArea args = new JTextArea("-Xmx4g -Xms4g");
+        JTextField args = new JTextField();
         JButton advSetting = new JButton("Advanced Settings");
 
         setInteractable = value -> {

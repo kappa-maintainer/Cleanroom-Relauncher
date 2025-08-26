@@ -33,7 +33,7 @@ public class Config {
         proxyAddr = forgeConfig.getString("Proxy Address", categoryGeneral, "", "Proxy address");
         proxyPort = forgeConfig.getInt("Proxy Port", categoryGeneral, 0, 0, 65535, "Proxy Port");
         javaPath = forgeConfig.getString("Java Path", categoryGeneral, "", "Path to javaw.exe or java binary");
-        jvmArgs = forgeConfig.getString("JVM Arguments", categoryGeneral, "", "Arguments for Java 21 jvm");
+        jvmArgs = forgeConfig.getString("JVM Arguments", categoryGeneral, "-Xmx4g -Xms4g", "Arguments for Java 21 jvm");
         respectLibraryStructure = forgeConfig.getBoolean("Respect Library Structure", categoryGeneral, true, "Put library files under directory of their group name");
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, "", "Library path, you may point it to launcher's library path for re-using, empty for default relauncher/");
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, 5, 1, 65535, "Maximum attempts on downloading file.");

@@ -1,6 +1,5 @@
 package com.cleanroommc.relauncher;
 
-import com.google.common.collect.ImmutableList;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -9,16 +8,23 @@ import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
+import org.apache.hc.client5.http.ssl.TlsSocketStrategy;
 import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 
+import javax.net.ssl.SSLContext;
 import javax.swing.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.util.Arrays;
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.ExecutorService;
@@ -27,17 +33,42 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Downloader {
-    private static final PoolingHttpClientConnectionManager connManager = new PoolingHttpClientConnectionManager();
+    private static final PoolingHttpClientConnectionManager connManager;
     private static final HttpClientBuilder builder;
     private static final PriorityQueue<DownloadEntry> queue = new PriorityQueue<>();
+
     static {
+
+        try {
+            SSLContext sslContext = new SSLContextBuilder()
+                    .loadTrustMaterial(null, (x509CertChain, authType) -> true)
+                    .build();
+            TlsSocketStrategy tlsStrategy = new DefaultClientTlsStrategy(sslContext);
+            connManager = PoolingHttpClientConnectionManagerBuilder
+                    .create()
+                    .setTlsSocketStrategy(tlsStrategy)
+                    .build();
+        } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
+            throw new RuntimeException(e);
+        }
+
         connManager.setMaxTotal(Config.maxDownloadSession);
-        
-        if (!Config.proxyAddr.isEmpty() && Config.proxyPort != 0)
-            builder = HttpClients.custom().setConnectionManager(connManager).setConnectionManagerShared(true).setProxy(new HttpHost(Config.proxyAddr, Config.proxyPort));
-        else 
-            builder = HttpClients.custom().setConnectionManager(connManager).setConnectionManagerShared(true);
+
+        if (!Config.proxyAddr.isEmpty() && Config.proxyPort != 0) {
+            builder = HttpClients
+                    .custom()
+                    .setConnectionManager(connManager)
+                    .setConnectionManagerShared(true)
+                    .setProxy(new HttpHost(Config.proxyAddr, Config.proxyPort));
+        } else {
+            builder = HttpClients
+                    .custom()
+                    .setConnectionManager(connManager)
+                    .setConnectionManagerShared(true);
+        }
+
     }
+
     public static void downloadAll(List<DownloadEntry> list) {
         Initializer.getMainProgressbar().setMaximum(list.size());
         try (CloseableHttpClient client = builder.build()) {
@@ -47,7 +78,7 @@ public class Downloader {
                 }
                 ExecutorService pool = Executors.newFixedThreadPool(Config.maxDownloadSession);
                 AtomicInteger i = new AtomicInteger();
-                while (!list.isEmpty()){
+                while (!list.isEmpty()) {
                     DownloadEntry entry = list.remove(0);
                     try {
                         HttpGet httpGet = new HttpGet(entry.getUrl().toURI());
@@ -64,7 +95,7 @@ public class Downloader {
             Relauncher.LOGGER.error(e);
         }
     }
-    
+
 
     private static boolean calculateSHA1(File dest, String sha1) {
         if (sha1.isEmpty()) {
@@ -81,7 +112,7 @@ public class Downloader {
             return false;
         }
     }
-    
+
     private static class DownloadThread extends Thread {
         private final CloseableHttpClient httpClient;
         private final HttpGet httpget;
@@ -93,6 +124,7 @@ public class Downloader {
             setName("Download thread#" + id);
             this.entry = entry;
         }
+
         @Override
         public void run() {
             Relauncher.LOGGER.info("Checking {}...", entry.getDestination());
@@ -110,7 +142,7 @@ public class Downloader {
                     Relauncher.LOGGER.error(e.getMessage());
                 }
             }
-            try{
+            try {
                 //Executing the request
                 ClassicHttpResponse httpresponse = httpClient.execute(httpget, response -> {
                     try (FileOutputStream outputStream = new FileOutputStream(entry.getDestination())) {
@@ -132,8 +164,8 @@ public class Downloader {
                         Initializer.addProgress();
                     }
                 }
-                
-            }catch(Exception e) {
+
+            } catch (Exception e) {
                 Relauncher.LOGGER.error(e);
             }
         }
