@@ -15,6 +15,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JProgressBar;
+import javax.swing.JSeparator;
 import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
@@ -26,8 +27,6 @@ import javax.swing.filechooser.FileFilter;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -63,11 +62,15 @@ public class Initializer {
         JTextField pathText = new JTextField();
         JLabel jvmStatus = new JLabel(invalid);
         JFileChooser jvmPicker = getJavaFileChooser();
-        JButton detectJvmButton = new JButton("Detect JVMs");
-        JButton browserButton = new JButton("Browser...");
+        JButton detectJvmButton = new JButton("Detect Java");
+        JButton browserButton = new JButton("Browse Java");
+        JSeparator separator1 = new JSeparator();
+        separator1.setOrientation(JSeparator.HORIZONTAL);
         JLabel argsLabel = new JLabel("Java Args");
         JTextField args = new JTextField();
         JButton advSetting = new JButton("Advanced Settings");
+        JSeparator separator3 = new JSeparator();
+        separator3.setOrientation(JSeparator.HORIZONTAL);
 
         setInteractable = value -> {
             launchButton.setEnabled(value);
@@ -75,11 +78,12 @@ public class Initializer {
             detectJvmButton.setEnabled(value);
             browserButton.setEnabled(value);
             args.setEnabled(value);
+            advSetting.setEnabled(value);
         };
 
         launchButton = new JButton("Launch");
         launchButton.setEnabled(false);
-        
+        // java related
         mainFrame.add(pathLabel, "cell 0 0, grow");
         pathLabel.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(pathLabel);
@@ -89,27 +93,36 @@ public class Initializer {
         mainFrame.add(jvmStatus, "cell 3 0, grow");
         jvmStatus.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(jvmStatus);
-        mainFrame.add(detectJvmButton, "cell 1 1, grow");
+        mainFrame.add(detectJvmButton, "cell 0 1 2 1, grow");
         GUIUtils.enlargeFont(detectJvmButton);
-        mainFrame.add(browserButton, "cell 2 1, grow");
+        mainFrame.add(browserButton, "cell 2 1 21, grow");
         GUIUtils.enlargeFont(browserButton);
-        mainFrame.add(argsLabel, "cell 0 2, grow");
+        
+        mainFrame.add(separator1, "cell 0 2 4 1, grow");
+        // args
+        mainFrame.add(argsLabel, "cell 0 3, grow");
         argsLabel.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(argsLabel);
-        mainFrame.add(args, "cell 1 2 2 1, grow");
+        mainFrame.add(args, "cell 1 3 3 1, grow");
         args.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(args);
-        mainFrame.add(advSetting, "cell 1 3 2 1, grow");
+
+        // adv settings
+        mainFrame.add(advSetting, "cell 0 4 4 1, grow");
         advSetting.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(advSetting);
-        mainFrame.add(mainStatusLabel, "cell 1 4 2 1, grow");
+
+        mainFrame.add(separator3, "cell 0 5 4 1, grow");
+        
+        mainFrame.add(mainStatusLabel, "cell 0 6 4 1, grow");
         mainStatusLabel.setMinimumSize(new Dimension(300, 10));
         mainStatusLabel.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(mainStatusLabel);
-        mainFrame.add(mainProgressbar, "cell 1 5 2 1, grow");
+        mainFrame.add(mainProgressbar, "cell 0 7 4 1, grow");
         mainProgressbar.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(mainProgressbar);
-        mainFrame.add(launchButton, "cell 1 6 2 1, grow");
+        
+        mainFrame.add(launchButton, "cell 0 8 4 1, grow");
         launchButton.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(launchButton, Font.BOLD, 20);
 
@@ -255,11 +268,10 @@ public class Initializer {
 
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
-        //mainFrame.setSize(GUIUtils.scaledWidth / 2, GUIUtils.scaledHeight / 4);
         mainFrame.pack();
-        //mainFrame.setResizable(false);
         GUIUtils.setCentral(mainFrame);
         mainFrame.setVisible(true);
+        mainFrame.setMinimumSize(mainFrame.getSize());
         synchronized (Relauncher.o) {
             try {
                 Relauncher.o.wait();
@@ -330,34 +342,26 @@ public class Initializer {
     private static void showDetectorDialog(JTextField pathField) {
         JDialog detector = new JDialog();
         detector.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        detector.setLayout(new GridBagLayout());
+        detector.setLayout(new MigLayout(
+                "",
+                "[grow][grow]",
+                "[grow][grow][grow]"
+        ));
         DefaultListModel<JVMInfo> model = new DefaultListModel<>();
         JList<JVMInfo> list = new JList<>(model);
-        JLabel info = new JLabel("Idle");
+        JLabel info = new JLabel("Status: Idle");
+        info.setHorizontalAlignment(JLabel.CENTER);
         JButton confirm = new JButton("Confirm");
         JButton cancel = new JButton("Cancel");
-
-        GridBagConstraints c =new GridBagConstraints();
-        c.fill = GridBagConstraints.CENTER;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.gridwidth = 3;
-        c.gridheight = 4;
-        c.ipady = 100;
-        c.ipadx = 100;
-        detector.add(list, c);
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.ipady = 0;
-        c.ipadx = 0;
-        c.gridy = 4;
-        c.gridheight = 1;
-        detector.add(info, c);
-        c.gridy = 5;
-        c.gridwidth = 2;
-        detector.add(cancel, c);
-        c.gridx = 2;
-        c.gridwidth = 1;
-        detector.add(confirm, c);
+        
+        detector.add(list, "cell 0 0 2 2, grow");
+        GUIUtils.enlargeFont(list);
+        detector.add(info, "cell 0 2 2 1, grow");
+        GUIUtils.enlargeFont(info);
+        detector.add(cancel, "cell 0 3, grow");
+        GUIUtils.enlargeFont(cancel);
+        detector.add(confirm, "cell 1 3, grow");
+        GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
 
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         list.setLayoutOrientation(JList.VERTICAL);
@@ -366,7 +370,9 @@ public class Initializer {
             String path = list.getSelectedValue().getFile().getAbsolutePath();
             info.setText(path);
             info.setToolTipText(path);
+            detector.pack();
         });
+        list.setMinimumSize(new Dimension(300, 200));
 
         cancel.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(cancel)) {
@@ -393,6 +399,7 @@ public class Initializer {
         detector.setAlwaysOnTop(true);
         setGUIInteractable(false);
         detector.setVisible(true);
+        detector.setMinimumSize(detector.getSize());
 
         Thread scan = new Thread(() -> {
             for (JVMInfo i : JavaDetector.getInstalledJVMs()) {
@@ -410,8 +417,13 @@ public class Initializer {
 
     private static void showAdvancedSettingDialog() {
         JDialog advSetting = new JDialog();
-        advSetting.setLayout(new GridBagLayout());
+        advSetting.setLayout(new MigLayout(
+                "",
+                "[grow][grow][grow][grow]",
+                "[grow][grow][grow][grow][grow][grow][grow][grow]"
+        ));
         JLabel libraryPathLabel = new JLabel("Library Path");
+        libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
         JTextField libraryPathText = new JTextField();
         libraryPathText.setText(Config.libraryPath);
         JButton confirm = new JButton("Confirm");
@@ -419,80 +431,76 @@ public class Initializer {
         JCheckBox groupNameInPathCheckbox = new JCheckBox("Place Libraries in Group Name");
         groupNameInPathCheckbox.setSelected(Config.respectLibraryStructure);
         JButton libraryBrowserButton = new JButton("Browser...");
-        JLabel proxyLabel = new JLabel("Proxy");
+        JLabel proxyLabel = new JLabel("Proxy URL");
+        proxyLabel.setHorizontalAlignment(JLabel.CENTER);
+        JLabel proxyPortLabel = new JLabel("Proxy Port");
+        proxyPortLabel.setHorizontalAlignment(JLabel.CENTER);
         JTextField proxyAddrTextField = new JTextField();
         proxyAddrTextField.setText(Config.proxyAddr);
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
-        JCheckBox useLocalCheckbox = new JCheckBox("Use Local Pack");
+        JCheckBox useLocalCheckbox = new JCheckBox("Use Local MMC Pack");
         useLocalCheckbox.setSelected(Config.useLocalPack);
         JLabel mirrorLabel = new JLabel("Maven Mirror");
+        mirrorLabel.setHorizontalAlignment(JLabel.CENTER);
         JComboBox<String> mirrorList = new JComboBox<>(new Vector<>(Lists.newArrayList(mirrors)));
         mirrorList.setSelectedItem(Config.replaceMavenURL);
-        JLabel maxRetryLabel = new JLabel("Max connection attempts");
+        JLabel maxRetryLabel = new JLabel("Max retry");
+        maxRetryLabel.setHorizontalAlignment(JLabel.CENTER);
         JSpinner maxRetrySpinner = new JSpinner(new SpinnerNumberModel(Config.maxRetry, 1, 65535, 1));
-        JLabel maxSessionLabel = new JLabel("Max concurrent download sessions");
+        JLabel maxSessionLabel = new JLabel("Max sessions");
+        maxSessionLabel.setHorizontalAlignment(JLabel.CENTER);
         JSpinner maxSessionSpinner = new JSpinner(new SpinnerNumberModel(Config.maxDownloadSession, 1, 65535, 1));
 
         libraryPathText.setToolTipText("Path to place the libraries, leave it empty to use default location");
 
-        GridBagConstraints c =new GridBagConstraints();
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.gridheight = 1;
-        c.gridwidth = 1;
-        advSetting.add(libraryPathLabel, c);
-        c.gridx = 1;
-        c.gridwidth = 2;
-        advSetting.add(libraryPathText, c);
-        c.gridx = 3;
-        c.gridwidth = 1;
-        advSetting.add(libraryBrowserButton, c);
-        c.gridy = 1;
-        c.gridx = 0;
-        c.gridwidth = 1;
-        advSetting.add(proxyLabel, c);
-        c.gridwidth = 2;
-        c.gridx = 1;
-        advSetting.add(proxyAddrTextField, c);
-        c.gridwidth = 1;
-        c.gridx = 3;
-        advSetting.add(portSpinner, c);
-        c.gridx = 0;
-        c.gridy = 2;
-        c.gridwidth = 1;
-        advSetting.add(mirrorLabel, c);
-        c.gridx = 1;
-        c.gridwidth = 3;
-        advSetting.add(mirrorList, c);
-        c.gridy = 3;
-        c.gridwidth = 3;
-        c.gridx = 0;
-        advSetting.add(maxRetryLabel, c);
-        c.gridx = 3;
-        c.gridwidth = 1;
-        advSetting.add(maxRetrySpinner, c);
-        c.gridy = 4;
-        c.gridwidth = 3;
-        c.gridx = 0;
-        advSetting.add(maxSessionLabel, c);
-        c.gridx = 3;
-        c.gridwidth = 1;
-        advSetting.add(maxSessionSpinner, c);
-        c.gridy = 5;
-        c.gridx = 0;
-        c.gridwidth = 1;
-        advSetting.add(useLocalCheckbox, c);
-        c.gridx = 1;
-        advSetting.add(groupNameInPathCheckbox, c);
-        c.gridx = 0;
-        c.gridwidth = 4;
-        c.gridy = 6;
-        advSetting.add(confirm, c);
+        advSetting.add(libraryPathLabel, "cell 0 0, grow");
+        GUIUtils.enlargeFont(libraryPathLabel);
+        advSetting.add(libraryPathText, "cell 1 0 3 1, grow");
+        GUIUtils.enlargeFont(libraryPathText);
+        advSetting.add(groupNameInPathCheckbox, "cell 1 1 2 1, grow");
+        GUIUtils.enlargeFont(groupNameInPathCheckbox);
+        advSetting.add(libraryBrowserButton, "cell 3 1, grow");
+        GUIUtils.enlargeFont(libraryBrowserButton);
+        
+        advSetting.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 2 4 1, grow");
+        
+        advSetting.pack();
+        int width = libraryPathText.getWidth();
+
+        advSetting.add(mirrorLabel, "cell 0 3, grow");
+        GUIUtils.enlargeFont(mirrorLabel);
+        advSetting.add(mirrorList, "cell 1 3 3 1, grow");
+        GUIUtils.enlargeFont(mirrorList);
+        mirrorList.setMaximumSize(new Dimension(width, Integer.MAX_VALUE));
+        
+        advSetting.add(proxyLabel, "cell 0 4, grow");
+        GUIUtils.enlargeFont(proxyLabel);
+        advSetting.add(proxyAddrTextField, "cell 1 4, grow");
+        GUIUtils.enlargeFont(proxyAddrTextField);
+        advSetting.add(proxyPortLabel, "cell 2 4,grow");
+        GUIUtils.enlargeFont(proxyPortLabel);
+        advSetting.add(portSpinner, "cell 3 4, grow");
+        GUIUtils.enlargeFont(portSpinner);
+        
+        advSetting.add(maxRetryLabel, "cell 0 5, grow");
+        GUIUtils.enlargeFont(maxRetryLabel);
+        advSetting.add(maxRetrySpinner, "cell 1 5, grow");
+        GUIUtils.enlargeFont(maxRetrySpinner);
+        advSetting.add(maxSessionLabel, "cell 2 5, grow");
+        GUIUtils.enlargeFont(maxSessionLabel);
+        advSetting.add(maxSessionSpinner, "cell 3 5, grow");
+        GUIUtils.enlargeFont(maxSessionSpinner);
+        
+        advSetting.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 6 4 1, grow");
+        
+        advSetting.add(useLocalCheckbox, "cell 0 7 2 1, grow");
+        GUIUtils.enlargeFont(useLocalCheckbox);
+        advSetting.add(confirm, "cell 3 7, grow");
+        GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
         
         groupNameInPathCheckbox.setToolTipText("Place libraries in their corresponding groups. Useful when you want to reuse libraries with the launcher.");
         
-        mirrorList.setToolTipText("The mirror URL used to replace central maven. Currently only Chinese ISP may need this.");
+        mirrorLabel.setToolTipText("The mirror URL used to replace central maven. Currently only Chinese ISP may need this.");
 
         
         libraryBrowserButton.addActionListener(actionEvent -> {
@@ -504,7 +512,8 @@ public class Initializer {
                 }
             }
         });
-        //libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
+        
+        mirrorList.addActionListener(actionEvent -> mirrorList.setToolTipText((String) mirrorList.getSelectedItem()));
 
         useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");
 
@@ -514,7 +523,6 @@ public class Initializer {
         portSpinner.setModel(new SpinnerNumberModel());
         
         mirrorList.setEditable(true);
-        mirrorList.setMaximumSize(new Dimension(200, Integer.MAX_VALUE));
         
         confirm.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(confirm)) {
@@ -534,9 +542,10 @@ public class Initializer {
         advSetting.setAlwaysOnTop(true);
         advSetting.pack();
         GUIUtils.setCentral(advSetting);
-        advSetting.setResizable(false);
+        advSetting.setMinimumSize(advSetting.getSize());
         setGUIInteractable(false);
         advSetting.setVisible(true);
+        advSetting.requestFocus();
     }
     
     public synchronized static void addProgress() {

@@ -47,6 +47,7 @@ public class Downloader {
             connManager = PoolingHttpClientConnectionManagerBuilder
                     .create()
                     .setTlsSocketStrategy(tlsStrategy)
+                    //.setDefaultConnectionConfig(ConnectionConfig.custom().setSocketTimeout(Timeout.ofSeconds(10)).build())
                     .build();
         } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
             throw new RuntimeException(e);
@@ -108,7 +109,7 @@ public class Downloader {
             }
             return match;
         } catch (IOException e) {
-            Relauncher.LOGGER.warn("Caught error in SHA1 calculation of file {}, re-downloading", dest, e);
+            Relauncher.LOGGER.warn("Caught error in SHA1 calculation of file {}, re-downloading", dest.getName(), e);
             return false;
         }
     }
@@ -127,10 +128,10 @@ public class Downloader {
 
         @Override
         public void run() {
-            Relauncher.LOGGER.info("Checking {}...", entry.getDestination());
+            Relauncher.LOGGER.info("Checking {}...", entry.getDestination().getName());
             if (entry.getDestination().exists()) {
                 if (calculateSHA1(entry.getDestination(), entry.getSha1())) {
-                    Relauncher.LOGGER.info("File {} already exist, skipping", entry.getDestination());
+                    Relauncher.LOGGER.info("File {} already exist, skipping", entry.getDestination().getName());
                     Initializer.addProgress();
                     return;
                 }
@@ -138,7 +139,7 @@ public class Downloader {
                 try {
                     Files.createDirectories(entry.getDestination().getParentFile().toPath());
                 } catch (IOException e) {
-                    Relauncher.LOGGER.error("Create file failed.");
+                    Relauncher.LOGGER.error("Create parent directory of {} failed.", entry.getDestination());
                     Relauncher.LOGGER.error(e.getMessage());
                 }
             }
@@ -148,17 +149,17 @@ public class Downloader {
                     try (FileOutputStream outputStream = new FileOutputStream(entry.getDestination())) {
                         IOUtils.copy(response.getEntity().getContent(), outputStream);
                     }
-                    httpClient.close();
                     return (CloseableHttpResponse) response;
                 });
                 if (!entry.getSha1().isEmpty()) {
                     if (!calculateSHA1(entry.getDestination(), entry.getSha1())) {
-                        Relauncher.LOGGER.info("Downloaded file {} has invalid checksum, re-downloading...", entry.getDestination());
+                        Relauncher.LOGGER.info("Downloaded file {} has invalid checksum, re-downloading...", entry.getDestination().getName());
                         if (entry.failed() >= Config.maxRetry) {
-                            Relauncher.LOGGER.error("Download {} reached max attempts", entry.getDestination());
+                            Relauncher.LOGGER.error("Download {} reached max attempts", entry.getDestination().getName());
                             throw new RuntimeException("Max retry reached");
                         } else {
                             queue.add(entry);
+                            Relauncher.LOGGER.info("Adding {} back to queue", entry.getDestination().getName());
                         }
                     } else {
                         Initializer.addProgress();
@@ -166,7 +167,14 @@ public class Downloader {
                 }
 
             } catch (Exception e) {
-                Relauncher.LOGGER.error(e);
+                Relauncher.LOGGER.error(e.getMessage());
+                if (entry.failed() >= Config.maxRetry) {
+                    Relauncher.LOGGER.error("Download {} reached max attempts, caused by {}.", entry.getDestination().getName(), e);
+                    throw new RuntimeException("Max retry reached");
+                } else {
+                    queue.add(entry);
+                    Relauncher.LOGGER.info("Retrying on {}", entry.getDestination().getName());
+                }
             }
         }
     }
