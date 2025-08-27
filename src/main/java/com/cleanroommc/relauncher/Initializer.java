@@ -46,7 +46,7 @@ public class Initializer {
     private static Consumer<Boolean> setInteractable;
     private static Runnable verifyJVM;
     private static final String[] mirrors = new String[]{
-            "",
+            "https://repo.maven.apache.org/maven2",
             "https://maven.aliyun.com/repository/public",
             "http://mirrors.163.com/maven/repository/maven-public",
             "https://repo.huaweicloud.com/repository/maven",
@@ -64,13 +64,9 @@ public class Initializer {
         JFileChooser jvmPicker = getJavaFileChooser();
         JButton detectJvmButton = new JButton("Detect Java");
         JButton browserButton = new JButton("Browse Java");
-        JSeparator separator1 = new JSeparator();
-        separator1.setOrientation(JSeparator.HORIZONTAL);
         JLabel argsLabel = new JLabel("Java Args");
         JTextField args = new JTextField();
         JButton advSetting = new JButton("Advanced Settings");
-        JSeparator separator3 = new JSeparator();
-        separator3.setOrientation(JSeparator.HORIZONTAL);
 
         setInteractable = value -> {
             launchButton.setEnabled(value);
@@ -98,7 +94,7 @@ public class Initializer {
         mainFrame.add(browserButton, "cell 2 1 21, grow");
         GUIUtils.enlargeFont(browserButton);
         
-        mainFrame.add(separator1, "cell 0 2 4 1, grow");
+        mainFrame.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 2 4 1, grow");
         // args
         mainFrame.add(argsLabel, "cell 0 3, grow");
         argsLabel.setHorizontalAlignment(JLabel.CENTER);
@@ -112,7 +108,7 @@ public class Initializer {
         advSetting.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(advSetting);
 
-        mainFrame.add(separator3, "cell 0 5 4 1, grow");
+        mainFrame.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 5 4 1, grow");
         
         mainFrame.add(mainStatusLabel, "cell 0 6 4 1, grow");
         mainStatusLabel.setMinimumSize(new Dimension(300, 10));
@@ -340,7 +336,8 @@ public class Initializer {
     }
 
     private static void showDetectorDialog(JTextField pathField) {
-        JDialog detector = new JDialog();
+        JDialog detector = new JDialog(mainFrame.getOwner());
+        detector.setFocusableWindowState(true);
         detector.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         detector.setLayout(new MigLayout(
                 "",
@@ -416,22 +413,24 @@ public class Initializer {
     }
 
     private static void showAdvancedSettingDialog() {
-        JDialog advSetting = new JDialog();
+        JDialog advSetting = new JDialog(mainFrame.getOwner());
         advSetting.setLayout(new MigLayout(
                 "",
                 "[grow][grow][grow][grow]",
                 "[grow][grow][grow][grow][grow][grow][grow][grow]"
         ));
+        advSetting.setFocusableWindowState(true);
         JLabel libraryPathLabel = new JLabel("Library Path");
         libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
         JTextField libraryPathText = new JTextField();
         libraryPathText.setText(Config.libraryPath);
+        JButton cancel = new JButton("Cancel");
         JButton confirm = new JButton("Confirm");
         JFileChooser libraryPicker = getLibraryPathChooser();
         JCheckBox groupNameInPathCheckbox = new JCheckBox("Place Libraries in Group Name");
         groupNameInPathCheckbox.setSelected(Config.respectLibraryStructure);
         JButton libraryBrowserButton = new JButton("Browser...");
-        JLabel proxyLabel = new JLabel("Proxy URL");
+        JLabel proxyLabel = new JLabel("Proxy Host");
         proxyLabel.setHorizontalAlignment(JLabel.CENTER);
         JLabel proxyPortLabel = new JLabel("Proxy Port");
         proxyPortLabel.setHorizontalAlignment(JLabel.CENTER);
@@ -495,6 +494,8 @@ public class Initializer {
         
         advSetting.add(useLocalCheckbox, "cell 0 7 2 1, grow");
         GUIUtils.enlargeFont(useLocalCheckbox);
+        advSetting.add(cancel, "cell 2 7, grow");
+        GUIUtils.enlargeFont(cancel);
         advSetting.add(confirm, "cell 3 7, grow");
         GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
         
@@ -523,6 +524,13 @@ public class Initializer {
         portSpinner.setModel(new SpinnerNumberModel());
         
         mirrorList.setEditable(true);
+        
+        cancel.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(cancel)) {
+                advSetting.setVisible(false);
+                setGUIInteractable(true);
+            }
+        });
         
         confirm.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(confirm)) {
