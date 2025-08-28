@@ -1,5 +1,7 @@
 package com.cleanroommc.relauncher;
 
+import net.miginfocom.layout.LC;
+import net.miginfocom.swing.MigLayout;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.io.FileUtils;
@@ -18,25 +20,27 @@ import java.util.function.Consumer;
 public class MMCInstaller {
 
     private static final JLabel mainStatusLabel = new JLabel();
-    private static final JProgressBar mainProgressbar = new JProgressBar();
-    private static final JLabel subStatusLabel = new JLabel();
-    private static final JProgressBar subProgressbar = new JProgressBar(0, 100);
     private static JButton confirmButton;
-    private static final JFrame mainFrame = new javax.swing.JFrame();
+    private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
     public static void showGUI() {
-        mainFrame.setLayout(new GridBagLayout());
-        GridBagConstraints c = new GridBagConstraints();
+        mainFrame.setLayout(new MigLayout());
 
-        JCheckBox proxyCheckbox = new JCheckBox("Use Proxy");
+        JLabel host = new JLabel("Proxy Host");
         JTextField proxyAddrTextField = new JTextField();
+        proxyAddrTextField.setText(Config.proxyAddr);
+
+        JLabel port = new JLabel("Proxy Port");
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 65535, 1));
+        portSpinner.setValue(Config.proxyPort);
         JCheckBox useLocalCheckbox = new JCheckBox("Use Local Pack");
 
+        JSeparator jSeparator1 = new JSeparator(JSeparator.HORIZONTAL);
+        JSeparator jSeparator2 = new JSeparator(JSeparator.HORIZONTAL);
+        
         setInteractable = value -> {
             confirmButton.setEnabled(value);
-            proxyCheckbox.setEnabled(value);
-            if (!value || proxyCheckbox.isSelected()) {
+            if (!value || !useLocalCheckbox.isSelected()) {
                 proxyAddrTextField.setEnabled(value);
                 portSpinner.setEnabled(value);
             }
@@ -44,37 +48,38 @@ public class MMCInstaller {
         };
 
         confirmButton = new JButton("Confirm");
-
-        c.gridheight = 1;
-        c.gridx = 0;
-        c.gridy = 0;
-        c.gridwidth = 1;
-        c.fill = GridBagConstraints.CENTER;
-        mainFrame.add(useLocalCheckbox, c);
-        c.gridx = 2;
-        mainFrame.add(proxyCheckbox, c);
-        c.gridx = 0;
-        c.gridy = 1;
-        c.gridwidth = 2;
-        c.fill = GridBagConstraints.HORIZONTAL;
-        mainFrame.add(proxyAddrTextField, c);
-        c.gridx = 2;
-        c.gridwidth = 1;
-        mainFrame.add(portSpinner, c);
-        c.gridx = 0;
-        c.gridy = 2;
-        c.gridwidth = 3;
-        c.ipady = 10;
-        mainFrame.add(mainStatusLabel, c);
-        c.gridy = 3;
-        mainFrame.add(mainProgressbar, c);
-        c.gridy = 4;
-        mainFrame.add(subStatusLabel, c);
-        c.gridy = 5;
-        mainFrame.add(subProgressbar, c);
-        c.gridy = 6;
-        c.ipady = 0;
-        mainFrame.add(confirmButton, c);
+        
+        mainFrame.add(useLocalCheckbox, "cell 0 0 2 1, grow, align center");
+        GUIUtils.enlargeFont(useLocalCheckbox);
+        useLocalCheckbox.setHorizontalAlignment(JCheckBox.CENTER);
+        
+        mainFrame.add(jSeparator1, "cell 0 1 2 1, grow");
+        
+        mainFrame.add(host, "cell 0 2, grow");
+        GUIUtils.enlargeFont(host);
+        mainFrame.add(proxyAddrTextField, "cell 1 2, grow");
+        GUIUtils.enlargeFont(proxyAddrTextField);
+        proxyAddrTextField.setMinimumSize(new Dimension(200, 10));
+        mainFrame.pack();
+        mainFrame.add(port, "cell 0 3, grow");
+        GUIUtils.enlargeFont(port);
+        mainFrame.add(portSpinner, "cell 1 3, grow");
+        GUIUtils.enlargeFont(portSpinner);
+        portSpinner.setMinimumSize(new Dimension(200, 10));
+        int width = port.getWidth() + portSpinner.getWidth();
+        mainFrame.add(mainStatusLabel, "cell 0 4 2 1, grow");
+        mainStatusLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(mainStatusLabel);
+        mainStatusLabel.setMinimumSize(new Dimension(width, 10));
+        
+        mainFrame.add(jSeparator2, "cell 0 5 2 1, grow");
+        
+        jSeparator1.setMinimumSize(new Dimension(width, 0));
+        jSeparator2.setMinimumSize(new Dimension(width, 0));;
+        
+        mainFrame.add(confirmButton, "cell 0 6 2 1, grow");
+        GUIUtils.enlargeFont(confirmButton, Font.BOLD, 20);
+        confirmButton.setMinimumSize(new Dimension(width, 10));
 
         mainFrame.setTitle("Relauncher Initialization Settings");
         mainFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -89,15 +94,15 @@ public class MMCInstaller {
         confirmButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(confirmButton)) {
                 setInteractable.accept(false);
-
-                mainProgressbar.setIndeterminate(false);
-                subProgressbar.setIndeterminate(false);
+                Config.useLocalPack = useLocalCheckbox.isSelected();
+                Config.proxyAddr = proxyAddrTextField.getText();
+                Config.proxyPort = (int) portSpinner.getValue();
 
                 try {
                     Thread workingThread = new Thread(() -> {
                         try {
-                            MMCPackDownloader.downloadAndExtract();
                             mainStatusLabel.setText("Installing Cleanroom...");
+                            MMCPackDownloader.downloadAndExtract();
                             File packDir = new File(Relauncher.workingDir, "mmcpack").getAbsoluteFile();
                             File instance = Launch.minecraftHome.getParentFile();
                             Relauncher.LOGGER.info("Instance directory: {}", instance.getAbsolutePath());
@@ -123,6 +128,7 @@ public class MMCInstaller {
                         } catch (Throwable e) {
                             mainStatusLabel.setText(e.getMessage());
                         }
+                        Config.save();
                         synchronized (Relauncher.o) {
                             Relauncher.o.notify();
                         }
@@ -134,8 +140,6 @@ public class MMCInstaller {
                     Config.configFile.delete();
                     mainStatusLabel.setText(t.getMessage());
                     setInteractable.accept(true);
-                    mainProgressbar.setIndeterminate(true);
-                    subProgressbar.setIndeterminate(true);
                 }
             }
         });
@@ -144,30 +148,27 @@ public class MMCInstaller {
 
 
         useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");
-        GUIUtils.enlargeFont(confirmButton);
+        useLocalCheckbox.setSelected(Config.useLocalPack);
+        proxyAddrTextField.setText(Config.proxyAddr);
+        portSpinner.setValue(Config.proxyPort);
 
-        proxyCheckbox.setToolTipText("Require Proxy Address & Port");
-        proxyCheckbox.addItemListener(itemEvent -> {
+        useLocalCheckbox.setToolTipText("Use the pack placed in /relauncher. Will disable proxy settings.");
+        useLocalCheckbox.addItemListener(itemEvent -> {
             boolean selected = itemEvent.getStateChange() == ItemEvent.SELECTED;
-            portSpinner.setEnabled(selected);
-            proxyAddrTextField.setEnabled(selected);
+            portSpinner.setEnabled(!selected);
+            proxyAddrTextField.setEnabled(!selected);
         });
 
         proxyAddrTextField.setToolTipText("Proxy Address");
-        proxyAddrTextField.setEnabled(false);
+        proxyAddrTextField.setEnabled(!useLocalCheckbox.isSelected());
 
-        portSpinner.setEnabled(false);
+        portSpinner.setEnabled(!useLocalCheckbox.isSelected());
         portSpinner.setToolTipText("Proxy Port");
         portSpinner.setModel(new SpinnerNumberModel());
 
-        mainProgressbar.setIndeterminate(true);
+        mainStatusLabel.setText("Status: Idle");
         mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
-        mainStatusLabel.setText("Idle");
-        subProgressbar.setIndeterminate(true);
-        subProgressbar.setMaximum(100);
-        subProgressbar.setMinimum(0);
-        subStatusLabel.setHorizontalAlignment(JTextField.CENTER);
-        subStatusLabel.setText("Idle");
+        
 
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
@@ -192,6 +193,7 @@ public class MMCInstaller {
         area.setFocusable(false);
         GUIUtils.enlargeFont(area, Font.BOLD, 20);
         JButton quit = new JButton("Quit");
+        GUIUtils.enlargeFont(quit, Font.BOLD, 20);
         quit.setActionCommand("quit");
         quit.addActionListener(actionEvent -> {
             if (actionEvent.getActionCommand().equals("quit")) {

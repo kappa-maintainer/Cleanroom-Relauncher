@@ -34,16 +34,16 @@ public class Relauncher implements IFMLLoadingPlugin {
             if (!workingDir.exists()) {
                 workingDir.mkdirs();
             }
+            LOGGER.info("Checking config");
+            boolean configExists = Files.exists(new File(new File(Launch.minecraftHome, "config"), "cleanroom_relauncher.cfg").toPath());
+            if (configExists) {
+                Config.syncConfig();
+            } else {
+                LOGGER.info("No config found, creating...");
+            }
             if (entry.startsWith("org.prismlauncher") || entry.startsWith("org.multimc") || entry.startsWith("org.polymc")) {
                 MMCInstaller.showGUI();
             } else {
-                LOGGER.info("Checking config");
-                boolean configExists = Files.exists(new File(new File(Launch.minecraftHome, "config"), "cleanroom_relauncher.cfg").toPath());
-                if (configExists) {
-                    Config.syncConfig();
-                } else {
-                    LOGGER.info("No config found, creating...");
-                }
                 if (!Config.booted) {
                     Initializer.InitJavaAndArg();
                 }

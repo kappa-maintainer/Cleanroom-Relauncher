@@ -3,6 +3,8 @@ package com.cleanroommc.relauncher;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -39,14 +41,10 @@ public class MMCPackDownloader {
                         Relauncher.LOGGER.info("Found local pack {}", packfile.get());
                         Files.copy(packfile.get().toPath(), pack.toPath());
                     } else {
-                        Initializer.getMainStatusLabel().setText("Configured to use local mmc pack but can't find matched target");
-                        Initializer.getLaunchButton().setEnabled(true);
-                        return;
+                        extractBundledZip(pack);
                     }
                 } else {
-                    Initializer.getMainStatusLabel().setText("Configured to use local mmc pack but directory is empty");
-                    Initializer.getLaunchButton().setEnabled(true);
-                    return;
+                    extractBundledZip(pack);
                 }
             }
         }
@@ -81,5 +79,20 @@ public class MMCPackDownloader {
         File universalTarget = new File(Relauncher.workingDir, universal.getName());
         Files.copy(universal.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
+    }
+    
+    private static void extractBundledZip(File pack) {
+        Relauncher.LOGGER.info("Attempt to unzip");
+        try {
+            FileOutputStream out = new FileOutputStream(pack);
+            InputStream in = Relauncher.class.getResourceAsStream("/mmcpack.zip");
+            IOUtils.copy(in, out);
+            out.close();
+            in.close();
+        } catch (IOException e) {
+            Relauncher.LOGGER.error("Failed to unzip bundled mmc pack");
+            Relauncher.LOGGER.error(e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 }
