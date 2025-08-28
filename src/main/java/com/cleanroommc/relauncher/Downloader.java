@@ -1,5 +1,6 @@
 package com.cleanroommc.relauncher;
 
+import nl.altindag.ssl.SSLFactory;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
@@ -13,18 +14,18 @@ import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
 import org.apache.hc.client5.http.ssl.TlsSocketStrategy;
 import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.HttpHost;
-import org.apache.hc.core5.ssl.SSLContextBuilder;
 
-import javax.net.ssl.SSLContext;
 import javax.swing.*;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.security.KeyManagementException;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.concurrent.ExecutorService;
@@ -40,16 +41,27 @@ public class Downloader {
     static {
 
         try {
-            SSLContext sslContext = new SSLContextBuilder()
-                    .loadTrustMaterial(null, (x509CertChain, authType) -> true)
+            InputStream certStream = Downloader.class.getResourceAsStream("/cacerts.jks");
+
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            keyStore.load(certStream, "changeit".toCharArray());
+            SSLFactory sslFactory = SSLFactory
+                    .builder()
+                    .withDefaultTrustMaterial()
+                    .withSystemTrustMaterial()
+                    .withTrustMaterial(keyStore)
+                    .withProtocols("TLSv1.0")
                     .build();
-            TlsSocketStrategy tlsStrategy = new DefaultClientTlsStrategy(sslContext);
-            connManager = PoolingHttpClientConnectionManagerBuilder
-                    .create()
-                    .setTlsSocketStrategy(tlsStrategy)
-                    //.setDefaultConnectionConfig(ConnectionConfig.custom().setSocketTimeout(Timeout.ofSeconds(10)).build())
-                    .build();
-        } catch (NoSuchAlgorithmException | KeyManagementException | KeyStoreException e) {
+            TlsSocketStrategy tlsStrategy = new DefaultClientTlsStrategy(sslFactory.getSslContext());
+            if (JVMInfo.getCurrentUpdateNumber() < 341) {
+                connManager = PoolingHttpClientConnectionManagerBuilder
+                        .create()
+                        .setTlsSocketStrategy(tlsStrategy)
+                        .build();
+            } else {
+                connManager = PoolingHttpClientConnectionManagerBuilder.create().build();
+            }
+        } catch (NoSuchAlgorithmException | KeyStoreException | CertificateException | IOException e) {
             throw new RuntimeException(e);
         }
 

@@ -44,7 +44,6 @@ public class MMCInstaller {
         };
 
         confirmButton = new JButton("Confirm");
-        confirmButton.setActionCommand("confirm");
 
         c.gridheight = 1;
         c.gridx = 0;
@@ -88,7 +87,7 @@ public class MMCInstaller {
 
 
         confirmButton.addActionListener(actionEvent -> {
-            if (actionEvent.getActionCommand().equals("confirm")) {
+            if (actionEvent.getSource().equals(confirmButton)) {
                 setInteractable.accept(false);
 
                 mainProgressbar.setIndeterminate(false);

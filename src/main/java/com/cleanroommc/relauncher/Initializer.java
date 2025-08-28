@@ -20,17 +20,21 @@ import javax.swing.JSpinner;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.Color;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Vector;
 import java.util.function.Consumer;
@@ -55,6 +59,7 @@ public class Initializer {
     };
     
     public static void InitJavaAndArg() {
+        checkJavaAndWarn();
         Config.syncConfig();
         mainFrame.setLayout(new MigLayout("", "[grow][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
 
@@ -556,8 +561,112 @@ public class Initializer {
         advSetting.requestFocus();
     }
     
+    private static void checkJavaAndWarn() {
+        JDialog warning = new JDialog();
+        warning.setLayout(new MigLayout());
+        JLabel icon = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
+        GUIUtils.enlargeFont(icon);
+        JLabel oldJava = new JLabel("You are using an outdated Java VM, relauncher may hang and need manually retry.");
+        oldJava.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(oldJava);
+        JLabel oldJava2 = new JLabel("To avoid potential malfunction, please click the button to download latest java 8.");
+        oldJava2.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(oldJava2);
+        LinkButton java8button = new LinkButton("https://adoptium.net/temurin/releases?version=8&os=any&arch=any");
+        GUIUtils.enlargeFont(java8button);
+        JLabel newJava = new JLabel("You will need at lest one Java 21+ JRE installed to use relauncher.");
+        newJava.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(newJava);
+        JLabel newJava2 = new JLabel("If you don't, please click the button to download one.");
+        newJava2.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(newJava2);
+        LinkButton java21button = new LinkButton("https://adoptium.net/temurin/releases?version=21&os=any&arch=any");
+        GUIUtils.enlargeFont(java21button);
+        JButton confirm = new JButton("Continue");
+        GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
+        JButton quit = new JButton("Quit");
+        GUIUtils.enlargeFont(quit);
+        
+        warning.add(icon, "cell 0 0 2 1, grow");
+        
+        if (JVMInfo.getCurrentUpdateNumber() < 341 && JVMInfo.getCurrentUpdateNumber() > 0) {
+            warning.add(oldJava, "cell 0 1, grow");
+            warning.add(oldJava2, "cell 0 2, grow");
+            warning.add(java8button, "cell 1 2, grow");
+            
+            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 3 2 1, grow");
+            
+            warning.add(newJava, "cell 0 4, grow");
+            warning.add(newJava2, "cell 0 5, grow");
+            warning.add(java21button, "cell 1 5, grow");
+
+            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 6 2 1, grow");
+            
+            warning.add(quit, "cell 0 7, grow");
+            warning.add(confirm, "cell 1 7, grow");
+        } else {
+            warning.add(newJava, "cell 0 1, grow");
+            warning.add(newJava2, "cell 0 2, grow");
+            warning.add(java21button, "cell 1 2, grow");
+
+            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 3 2 1, grow");
+            warning.add(quit, "cell 0 4, grow");
+            warning.add(confirm, "cell 1 4, grow");
+        }
+        
+        quit.addActionListener(actionEvent -> ExitWrapper.exit(0));
+        
+        confirm.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(confirm)) {
+                warning.setVisible(false);
+                synchronized (Relauncher.o) {
+                    Relauncher.o.notify();
+                }
+            }
+        });
+        
+        warning.validate();
+        warning.pack();
+        GUIUtils.setCentral(warning);
+        warning.setVisible(true);
+        warning.setResizable(false);
+        
+        synchronized (Relauncher.o) {
+            try {
+                Relauncher.o.wait();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+    
     public synchronized static void addProgress() {
         mainProgressbar.setValue(mainProgressbar.getValue() + 1);
+    }
+    
+    private static class LinkButton extends JButton{
+        public LinkButton(String link) {
+            super();
+            setText("<HTML><FONT color=\"#000099\"><U>link</U></FONT></HTML>");
+            addActionListener(actionEvent -> {
+                if (actionEvent.getSource().equals(this)) {
+                    if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                        try {
+                            Desktop.getDesktop().browse(new URI(link));
+                        } catch (IOException | URISyntaxException e) {
+                            Relauncher.LOGGER.error("Failed to open URL {}", link);
+                        }
+                    } else {
+                        Runtime runtime = Runtime.getRuntime();
+                        try {
+                            runtime.exec("xdg-open " + link);
+                        } catch (IOException e) {
+                            Relauncher.LOGGER.error("Failed to open URL {}", link);
+                        }
+                    }
+                }
+            });
+        }
     }
 
 }

@@ -2,6 +2,7 @@ package com.cleanroommc.relauncher;
 
 import com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.SystemUtils;
 
 import javax.annotation.Nonnull;
 import java.io.BufferedReader;
@@ -82,5 +83,28 @@ public class JVMInfo {
     @Override
     public String toString() {
         return specification + "|" + arch + "|" + version + "|" + vendor;
+    }
+    
+    public static JVMInfo getCurrent() {
+        String bin = System.getProperty("java.home")  + File.separatorChar + "bin" + File.separatorChar;
+        File binary;
+        if (SystemUtils.IS_OS_WINDOWS) {
+            binary = new File(bin + "javaw.exe");
+            if (!binary.exists()) {
+                binary = new File(bin + "java.exe");
+            }
+        } else {
+            binary = new File(bin + "java");
+        }
+        return new JVMInfo(binary.getAbsolutePath());
+    }
+    
+    public static int getCurrentUpdateNumber() {
+        String version = getCurrent().getVersion();
+        if (version.contains("_")) {
+            return Integer.parseInt(version.split("_")[1]);
+        } else {
+            return 0;
+        }
     }
 }
