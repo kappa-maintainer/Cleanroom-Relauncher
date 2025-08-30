@@ -7,6 +7,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class CleanroomVersionParser {
     private static String version = "";
@@ -44,5 +45,9 @@ public class CleanroomVersionParser {
         reader.close();
         CleanroomVersionParser.version = version;
         return version;
+    }
+    
+    public static void setVersion(String version) {
+        CleanroomVersionParser.version = version;
     }
 }

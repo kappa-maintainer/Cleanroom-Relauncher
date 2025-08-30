@@ -56,7 +56,7 @@ public class JVMInfo {
                 if (s.contains("options")) break;
             }
         } catch (IOException e) {
-            Relauncher.LOGGER.error(e);
+            Relauncher.LOGGER.debug(e);
         }
     }
 

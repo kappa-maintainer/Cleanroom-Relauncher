@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -57,12 +58,17 @@ public class MMCPackDownloader {
                     continue;
                 }
                 if (entry.getName().endsWith(".jar")) {
-                    Relauncher.LOGGER.info("Universal jar: {}", entry.getName());
                     String name = entry.getName();
                     if (name.startsWith("libraries")) {
-                        name = name.substring(9);
+                        name = name.substring(10);
                     }
                     universal = new File(libraries, name);
+                    Relauncher.LOGGER.info("Universal jar: {}", name);
+                    String version = name;
+                    if (version.startsWith("cleanroom-") && version.endsWith("-universal.jar")) {
+                        version = version.substring(10, version.indexOf("-universal.jar"));
+                    }
+                    CleanroomVersionParser.setVersion(version);
                 }
                 File entryDestination = new File(mmcDir, entry.getName());
                 if (entry.isDirectory()) {
