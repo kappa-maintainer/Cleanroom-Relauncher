@@ -18,11 +18,11 @@ public class CleanroomVersionParser {
         Relauncher.LOGGER.info("Parsing latest Cleanroom versions");
         Initializer.getMainStatusLabel().setText("Parsing latest Cleanroom versions");
         File metadata = new File(Relauncher.workingDir, "maven-metadata.xml");
-        String version = "0.3.13-alpha";
+        String version = "0.3.19-alpha";
 
         Relauncher.LOGGER.info("Downloading metadata");
         List<DownloadEntry> list = new ArrayList<>(1);
-        list.add(new DownloadEntry(new URL("https://maven.arcseekers.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), metadata, ""));
+        list.add(new DownloadEntry(new URL("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), metadata, ""));
         try {
             Downloader.downloadAll(list);
         } catch (Exception e) {

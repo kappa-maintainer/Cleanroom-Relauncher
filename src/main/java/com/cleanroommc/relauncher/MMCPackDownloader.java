@@ -1,5 +1,8 @@
 package com.cleanroommc.relauncher;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import io.netty.util.internal.StringUtil;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;
@@ -9,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
@@ -24,13 +28,13 @@ public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
         File libraries = new File(mmcDir, "libraries");
-        File universal = new File(libraries, "cleanroom-0.3.13-alpha-universal.jar");
+        File universalJar = new File(libraries, "cleanroom-0.3.19-alpha-universal.jar");
         mmcDir.mkdir();
         File pack = new File(mmcDir, "mmcpack.zip");
         if (!pack.exists()) {
             if (!Config.useLocalPack) {
                 String version = CleanroomVersionParser.getVersion();
-                universal = new File(libraries, "cleanroom-" + version + "-universal.jar");
+                universalJar = new File(libraries, "cleanroom-" + version + "-universal.jar");
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                 List<DownloadEntry> list = new ArrayList<>(1);
                 list.add(new DownloadEntry(new URL("https://github.com/CleanroomMC/Cleanroom/releases/download/" + version + "/Cleanroom-MMC-instance-" + version + ".zip"), pack, ""));
@@ -57,18 +61,17 @@ public class MMCPackDownloader {
                 if (entry.getName().equals(".packignore") || entry.getName().equals("instance.cfg")) {
                     continue;
                 }
-                if (entry.getName().endsWith(".jar")) {
-                    String name = entry.getName();
-                    if (name.startsWith("libraries")) {
-                        name = name.substring(10);
-                    }
-                    universal = new File(libraries, name);
-                    Relauncher.LOGGER.info("Universal jar: {}", name);
-                    String version = name;
-                    if (version.startsWith("cleanroom-") && version.endsWith("-universal.jar")) {
-                        version = version.substring(10, version.indexOf("-universal.jar"));
-                    }
-                    CleanroomVersionParser.setVersion(version);
+                if (entry.getName().endsWith("net.minecraftforge.json")) {
+                    JsonObject modJson = new JsonParser().parse(IOUtils.toString(zipFile.getInputStream(entry), StandardCharsets.UTF_8)).getAsJsonObject();
+                    modJson.getAsJsonArray("libraries").forEach(jsonElement -> {
+                        String libraryName = jsonElement.getAsJsonObject().get("name").getAsString();
+                        if (libraryName.startsWith("com.cleanroommc:cleanroom")) {
+                            String version = libraryName.split(":")[2].replace("-universal", "");
+                            CleanroomVersionParser.setVersion(version);
+                            Relauncher.LOGGER.info("Extracting Cleanroom version {}", version);
+                        }
+                    });
+                    universalJar = new File(libraries, "cleanroom-" + CleanroomVersionParser.getVersion() + "-universal.jar");
                 }
                 File entryDestination = new File(mmcDir, entry.getName());
                 if (entry.isDirectory()) {
@@ -82,8 +85,10 @@ public class MMCPackDownloader {
                 }
             }
         }
-        File universalTarget = new File(Relauncher.workingDir, universal.getName());
-        Files.copy(universal.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        if (universalJar.exists()) {
+            File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
+            Files.copy(universalJar.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
 
     }
     

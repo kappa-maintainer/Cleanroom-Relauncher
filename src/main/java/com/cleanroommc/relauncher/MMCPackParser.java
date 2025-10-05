@@ -5,33 +5,33 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.*;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.List;
 
 public class MMCPackParser {
-    private static String cp;
     private static final String osArch = System.getProperty("os.arch");
     public static void parseMMCPack() throws IOException {
         String version = CleanroomVersionParser.getVersion();
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
-        File universal = new File(new File(mmcDir, "libraries"), "cleanroom-" + version + "-universal.jar");
+        File universalJar = new File(new File(mmcDir, "libraries"), "cleanroom-" + version + "-universal.jar");
         File patches = new File(mmcDir, "patches");
         File vanillaJson = new File(patches, "net.minecraft.json");
         File moddedJson = new File(patches, "net.minecraftforge.json");
         File lwjglJson = new File(patches, "org.lwjgl3.json");
         mmcDir.mkdir();
-        File universalTarget = new File(Relauncher.workingDir, universal.getName());
-        Files.copy(universal.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        cp = universalTarget.getAbsolutePath() + File.pathSeparator;
+        File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
+        String cp = "";
+        if (universalJar.exists()) {
+            Files.copy(universalJar.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            cp = universalTarget.getAbsolutePath() + File.pathSeparator;
+        }
 
         JsonObject vanilla = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(vanillaJson.toPath()))).getAsJsonObject();
         JsonObject modded = new JsonParser().parse(IOUtils.toString(Files.newBufferedReader(moddedJson.toPath()))).getAsJsonObject();
