@@ -37,7 +37,7 @@ public class MMCPackDownloader {
                 universalJar = new File(libraries, "cleanroom-" + version + "-universal.jar");
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                 List<DownloadEntry> list = new ArrayList<>(1);
-                list.add(new DownloadEntry(new URL("https://github.com/CleanroomMC/Cleanroom/releases/download/" + version + "/Cleanroom-MMC-instance-" + version + ".zip"), pack, ""));
+                list.add(new DownloadEntry(new URL("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + "-alpha.zip"), pack, ""));
                 Downloader.downloadAll(list);
             } else {
                 if (Relauncher.workingDir.listFiles() != null) {
