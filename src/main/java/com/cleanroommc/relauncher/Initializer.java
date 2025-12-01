@@ -50,7 +50,7 @@ public class Initializer {
     
     public static void InitJavaAndArg() {
         Config.syncConfig();
-        if (Strings.isNullOrEmpty(Config.javaPath) || !isJavaNewerThan21(Config.javaPath)) {
+        if (JavaDetector.getInstalledJVMs().isEmpty()) {
             checkJavaAndWarn();
         }
         mainFrame.setLayout(new MigLayout("", "[grow][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
