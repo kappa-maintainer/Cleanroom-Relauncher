@@ -1,6 +1,6 @@
 package com.cleanroommc.relauncher;
 
-import com.google.common.collect.Lists;
+import com.google.common.base.Strings;
 import net.miginfocom.swing.MigLayout;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
@@ -8,7 +8,6 @@ import org.apache.commons.lang3.SystemUtils;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JComboBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
@@ -36,7 +35,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
-import java.util.Vector;
 import java.util.function.Consumer;
 
 public class Initializer {
@@ -49,18 +47,12 @@ public class Initializer {
     private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
     private static Runnable verifyJVM;
-    private static final String[] mirrors = new String[]{
-            "https://repo.maven.apache.org/maven2",
-            "https://maven.aliyun.com/repository/public",
-            "http://mirrors.163.com/maven/repository/maven-public",
-            "https://repo.huaweicloud.com/repository/maven",
-            "http://mirrors.cloud.tencent.com/nexus/repository/maven-public",
-            
-    };
     
     public static void InitJavaAndArg() {
-        checkJavaAndWarn();
         Config.syncConfig();
+        if (Strings.isNullOrEmpty(Config.javaPath) || !isJavaNewerThan21(Config.javaPath)) {
+            checkJavaAndWarn();
+        }
         mainFrame.setLayout(new MigLayout("", "[grow][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
 
         JLabel pathLabel = new JLabel("Java Path*");
@@ -444,10 +436,8 @@ public class Initializer {
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
         JCheckBox useLocalCheckbox = new JCheckBox("Use Local MMC Pack");
         useLocalCheckbox.setSelected(Config.useLocalPack);
-        JLabel mirrorLabel = new JLabel("Maven Mirror");
-        mirrorLabel.setHorizontalAlignment(JLabel.CENTER);
-        JComboBox<String> mirrorList = new JComboBox<>(new Vector<>(Lists.newArrayList(mirrors)));
-        mirrorList.setSelectedItem(Config.replaceMavenURL);
+        JCheckBox chineseModeCheckbox = new JCheckBox("Use Chinese Main Land Mirror");
+        chineseModeCheckbox.setSelected(Config.chineseMode);
         JLabel maxRetryLabel = new JLabel("Max retry");
         maxRetryLabel.setHorizontalAlignment(JLabel.CENTER);
         JSpinner maxRetrySpinner = new JSpinner(new SpinnerNumberModel(Config.maxRetry, 1, 65535, 1));
@@ -467,15 +457,11 @@ public class Initializer {
         GUIUtils.enlargeFont(libraryBrowserButton);
         
         advSetting.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 2 4 1, grow");
-        
-        advSetting.pack();
-        int width = libraryPathText.getWidth();
 
-        advSetting.add(mirrorLabel, "cell 0 3, grow");
-        GUIUtils.enlargeFont(mirrorLabel);
-        advSetting.add(mirrorList, "cell 1 3 3 1, grow");
-        GUIUtils.enlargeFont(mirrorList);
-        mirrorList.setMaximumSize(new Dimension(width, Integer.MAX_VALUE));
+        advSetting.add(chineseModeCheckbox, "cell 0 3 2 1, grow");
+        GUIUtils.enlargeFont(chineseModeCheckbox);
+        advSetting.add(useLocalCheckbox, "cell 2 3 2 1, grow");
+        GUIUtils.enlargeFont(useLocalCheckbox);
         
         advSetting.add(proxyLabel, "cell 0 4, grow");
         GUIUtils.enlargeFont(proxyLabel);
@@ -496,17 +482,15 @@ public class Initializer {
         GUIUtils.enlargeFont(maxSessionSpinner);
         
         advSetting.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 6 4 1, grow");
-        
-        advSetting.add(useLocalCheckbox, "cell 0 7 2 1, grow");
-        GUIUtils.enlargeFont(useLocalCheckbox);
-        advSetting.add(cancel, "cell 2 7, grow");
+
+        advSetting.add(cancel, "cell 0 7 2 1, grow");
         GUIUtils.enlargeFont(cancel);
-        advSetting.add(confirm, "cell 3 7, grow");
+        advSetting.add(confirm, "cell 2 7 2 1, grow");
         GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
         
         groupNameInPathCheckbox.setToolTipText("Place libraries in their corresponding groups. Useful when you want to reuse libraries with the launcher.");
         
-        mirrorLabel.setToolTipText("The mirror URL used to replace central maven. Currently only Chinese ISP may need this.");
+        chineseModeCheckbox.setToolTipText("Use mirror and proxy sites to speed up download from Chinese main land.");
 
         
         libraryBrowserButton.addActionListener(actionEvent -> {
@@ -519,7 +503,6 @@ public class Initializer {
             }
         });
         
-        mirrorList.addActionListener(actionEvent -> mirrorList.setToolTipText((String) mirrorList.getSelectedItem()));
 
         useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");
 
@@ -528,7 +511,6 @@ public class Initializer {
         portSpinner.setToolTipText("Proxy Port, leave it 0 means no proxy");
         portSpinner.setModel(new SpinnerNumberModel());
         
-        mirrorList.setEditable(true);
         
         cancel.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(cancel)) {
@@ -541,7 +523,7 @@ public class Initializer {
             if (actionEvent.getSource().equals(confirm)) {
                 advSetting.setVisible(false);
                 setGUIInteractable(true);
-                Config.replaceMavenURL = (String) mirrorList.getSelectedItem();
+                Config.chineseMode = chineseModeCheckbox.isSelected();
                 Config.useLocalPack = useLocalCheckbox.isSelected();
                 Config.proxyPort = (int) portSpinner.getValue();
                 Config.proxyAddr = proxyAddrTextField.getText();
@@ -574,7 +556,7 @@ public class Initializer {
         GUIUtils.enlargeFont(oldJava2);
         LinkButton java8button = new LinkButton("https://adoptium.net/temurin/releases?version=8&os=any&arch=any");
         GUIUtils.enlargeFont(java8button);
-        JLabel newJava = new JLabel("You will need at lest one Java 21+ JRE installed to use relauncher.");
+        JLabel newJava = new JLabel("You will need at least one Java 21+ JRE installed to use relauncher.");
         newJava.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(newJava);
         JLabel newJava2 = new JLabel("If you don't, please click the button to download one.");
@@ -602,16 +584,16 @@ public class Initializer {
 
             warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 6 2 1, grow");
             
-            warning.add(quit, "cell 0 7, grow");
-            warning.add(confirm, "cell 1 7, grow");
+            warning.add(confirm, "cell 0 7, grow");
+            warning.add(quit, "cell 1 7, grow");
         } else {
             warning.add(newJava, "cell 0 1, grow");
             warning.add(newJava2, "cell 0 2, grow");
             warning.add(java21button, "cell 1 2, grow");
 
             warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 3 2 1, grow");
-            warning.add(quit, "cell 0 4, grow");
-            warning.add(confirm, "cell 1 4, grow");
+            warning.add(confirm, "cell 0 4, grow");
+            warning.add(quit, "cell 1 4, grow");
         }
         
         quit.addActionListener(actionEvent -> ExitWrapper.exit(0));

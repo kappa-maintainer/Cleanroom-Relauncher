@@ -37,8 +37,10 @@ public class DownloadEntry {
         destination = new File(libDir, fileName);
         try {
             String urlString = triple.getMiddle();
-            if (!Config.replaceMavenURL.isEmpty()) {
-                urlString = urlString.replace("https://repo.maven.apache.org/maven2", Config.replaceMavenURL);
+            if (!Config.chineseMode) {
+                urlString = urlString.replace("https://repo.maven.apache.org/maven2", "https://maven.aliyun.com/repository/public");
+                urlString = urlString.replace("https://repo.cleanroommc.com/releases", "https://nexus.jsdu.cn/repository/cleanroommc-releases");
+                urlString = urlString.replace("https://maven.arcseekers.com/releases", "https://nexus.jsdu.cn/repository/arcseekers-releases");
             }
             url = new URL(urlString);
         } catch (MalformedURLException e) {

@@ -17,7 +17,7 @@ public class Config {
     public static String libraryPath;
     public static int maxRetry;
     public static int maxDownloadSession;
-    public static String replaceMavenURL;
+    public static boolean chineseMode;
     public static boolean booted;
     public static String classPath;
 
@@ -38,7 +38,7 @@ public class Config {
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, "", "Library path, you may point it to launcher's library path for re-using, empty for default relauncher/");
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, 5, 1, 65535, "Maximum attempts on downloading file.");
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, 5, 1, 65535, "Maximum session count when downloading multiple files.");
-        replaceMavenURL = forgeConfig.getString("Maven Mirror URL", categoryGeneral, "", "The custom maven mirror URL.");
+        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, false, "Use mirror and proxy that makes downloading from Chinese main land faster;");
         booted = forgeConfig.getBoolean("Booted once", categoryGeneral, false, "Config flag to check if this was booted, DO NOT EDIT");
         classPath = forgeConfig.getString("Class Path", categoryGeneral, "", "Class path used to launch, DO NOT EDIT");
         
@@ -59,7 +59,7 @@ public class Config {
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, libraryPath, "Library path, you may point it to launcher's library path for re-using, empty for default relauncher/");
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, maxRetry, 1, 65535, "Maximum attempts on downloading file.");
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, maxDownloadSession, 1, 65535, "Maximum session count when downloading multiple files.");
-        replaceMavenURL = forgeConfig.getString("Maven Mirror URL", categoryGeneral, replaceMavenURL, "The custom maven mirror URL.");
+        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, chineseMode, "Use mirror and proxy that makes downloading from Chinese main land faster;");
         booted = forgeConfig.getBoolean("Booted once", categoryGeneral, booted, "Config flag to check if this was booted, DO NOT EDIT");
         classPath = forgeConfig.getString("Class Path", categoryGeneral, classPath, "Class path used to launch, DO NOT EDIT");
 

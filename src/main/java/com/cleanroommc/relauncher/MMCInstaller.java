@@ -1,6 +1,5 @@
 package com.cleanroommc.relauncher;
 
-import net.miginfocom.layout.LC;
 import net.miginfocom.swing.MigLayout;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.ExitWrapper;
@@ -143,8 +142,6 @@ public class MMCInstaller {
                 }
             }
         });
-
-
 
 
         useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");

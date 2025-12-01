@@ -28,7 +28,7 @@ public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
         File libraries = new File(mmcDir, "libraries");
-        File universalJar = new File(libraries, "cleanroom-0.3.19-alpha-universal.jar");
+        File universalJar = new File(libraries, "cleanroom-0.3.27-alpha-universal.jar");
         mmcDir.mkdir();
         File pack = new File(mmcDir, "mmcpack.zip");
         if (!pack.exists()) {
@@ -37,7 +37,7 @@ public class MMCPackDownloader {
                 universalJar = new File(libraries, "cleanroom-" + version + "-universal.jar");
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                 List<DownloadEntry> list = new ArrayList<>(1);
-                list.add(new DownloadEntry(new URL("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + "-alpha.zip"), pack, ""));
+                list.add(new DownloadEntry(new URL("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + ".zip"), pack, ""));
                 Downloader.downloadAll(list);
             } else {
                 if (Relauncher.workingDir.listFiles() != null) {

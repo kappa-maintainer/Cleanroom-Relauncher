@@ -1,5 +1,7 @@
 package com.cleanroommc.relauncher;
 
+import org.intellij.lang.annotations.MagicConstant;
+
 import java.awt.*;
 
 public class GUIUtils {
@@ -23,7 +25,7 @@ public class GUIUtils {
         enlargeFont(component, Font.PLAIN, 20);
     }
 
-    public static void enlargeFont(Component component, int type, int size) {
+    public static void enlargeFont(Component component, @MagicConstant(intValues = {Font.PLAIN, Font.BOLD, Font.ITALIC}) int type, int size) {
         Font font = component.getFont();
         component.setFont(new Font(font.getName(), type, size));
     }

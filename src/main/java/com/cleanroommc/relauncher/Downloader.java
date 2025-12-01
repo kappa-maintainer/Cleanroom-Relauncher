@@ -93,6 +93,7 @@ public class Downloader {
                 AtomicInteger i = new AtomicInteger();
                 while (!list.isEmpty()) {
                     DownloadEntry entry = list.remove(0);
+                    Relauncher.LOGGER.info("Submitting download URL {}", entry.getUrl());
                     try {
                         HttpGet httpGet = new HttpGet(entry.getUrl().toURI());
                         pool.submit(new DownloadThread(client, httpGet, i.getAndIncrement(), entry));
