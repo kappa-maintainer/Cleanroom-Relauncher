@@ -22,16 +22,16 @@ repositories {
 
 dependencies {
     implementation("com.google.code.findbugs:jsr305:3.0.2")
-    shadow 'org.apache.httpcomponents.client5:httpclient5:5.5'
-    shadow 'org.apache.httpcomponents.core5:httpcore5-h2:5.3.4'
-    shadow 'org.apache.httpcomponents.core5:httpcore5:5.3.4'
-    shadow 'org.slf4j:slf4j-api:2.0.17'
-    shadow 'com.cleanroommc:java-utils:1.1.3'
+    shadow 'org.apache.httpcomponents.client5:httpclient5:5.6.1'
+    shadow 'org.apache.httpcomponents.core5:httpcore5-h2:5.4.2'
+    shadow 'org.apache.httpcomponents.core5:httpcore5:5.4.2'
+    shadow 'org.slf4j:slf4j-api:2.0.18'
+    shadow 'com.cleanroommc:java-utils:1.1.5'
 
     shadow 'com.miglayout:miglayout-core:5.3'
     shadow 'com.miglayout:miglayout-swing:5.3'
 
-    shadow 'io.github.hakky54:sslcontext-kickstart:9.1.0'
+    shadow 'io.github.hakky54:ayza:10.0.5'
 /*
     contain 'com.github.oshi:oshi-core:6.8.0'
     contain 'net.java.dev.jna:jna:5.17.0'
