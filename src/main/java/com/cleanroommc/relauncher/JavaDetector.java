@@ -24,16 +24,13 @@ public class JavaDetector {
             }
         }
         for (JavaInstall install : javaInstalls) {
-            try {
-                String path = install.executable(true).getCanonicalPath();
-                if (!javaPaths.contains(path)) {
-                    javaPaths.add(path);
-                    JVMInfo info = new JVMInfo(path);
-                    if (info.getSpecification() >= 21) {
-                        out.add(info);
-                    }
+            String path = install.executable(true).toString();
+            if (!javaPaths.contains(path)) {
+                javaPaths.add(path);
+                JVMInfo info = new JVMInfo(path);
+                if (info.getSpecification() >= 21) {
+                    out.add(info);
                 }
-            } catch (IOException ignored) {
             }
         }
         return out;
