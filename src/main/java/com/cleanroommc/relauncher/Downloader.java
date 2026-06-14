@@ -84,6 +84,7 @@ public class Downloader {
 
     public static void downloadAll(List<DownloadEntry> list) {
         Initializer.getMainProgressbar().setMaximum(list.size());
+        Initializer.setCurrentFile(null);
         try (CloseableHttpClient client = builder.build()) {
             while (!list.isEmpty() || !queue.isEmpty()) {
                 while (!queue.isEmpty()) {
@@ -145,7 +146,7 @@ public class Downloader {
             if (entry.getDestination().exists()) {
                 if (calculateSHA1(entry.getDestination(), entry.getSha1())) {
                     Relauncher.LOGGER.info("File {} already exist, skipping", entry.getDestination().getName());
-                    Initializer.addProgress();
+                    Initializer.addProgress(entry.getDestination().getName());
                     return;
                 }
             } else {
@@ -158,6 +159,7 @@ public class Downloader {
             }
             try {
                 //Executing the request
+                Initializer.setCurrentFile(entry.getDestination().getName());
                 ClassicHttpResponse httpresponse = httpClient.execute(httpget, response -> {
                     try (FileOutputStream outputStream = new FileOutputStream(entry.getDestination())) {
                         IOUtils.copy(response.getEntity().getContent(), outputStream);
@@ -175,7 +177,7 @@ public class Downloader {
                             Relauncher.LOGGER.info("Adding {} back to queue", entry.getDestination().getName());
                         }
                     } else {
-                        Initializer.addProgress();
+                        Initializer.addProgress(entry.getDestination().getName());
                     }
                 }
 

@@ -21,6 +21,7 @@ import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import javax.swing.WindowConstants;
 import javax.swing.event.DocumentEvent;
@@ -37,12 +38,20 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import javax.swing.Timer;
 
 public class Initializer {
     private static final String valid = "✔";
     private static final String invalid = "❌";
     private static volatile boolean verified = false;
+    private static final Set<String> activeDownloads = Collections.synchronizedSet(new LinkedHashSet<>());
+    private static final AtomicInteger cycleIdx = new AtomicInteger();
+    private static Timer cycleTimer;
     private static final JLabel mainStatusLabel = new JLabel();
     private static final JProgressBar mainProgressbar = new JProgressBar();
     private static JButton launchButton;
@@ -266,9 +275,18 @@ public class Initializer {
         argsLabel.setHorizontalAlignment(JLabel.CENTER);
 
         mainProgressbar.setIndeterminate(true);
-        mainProgressbar.addChangeListener(changeEvent -> mainStatusLabel.setText(String.format("Downloading: %d/%d", mainProgressbar.getValue(), mainProgressbar.getMaximum())));
+        mainProgressbar.addChangeListener(changeEvent -> updateStatusLabel());
         mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
         mainStatusLabel.setText("Status: Idle");
+
+        cycleTimer = new Timer(1500, e -> {
+            String[] files = activeDownloads.toArray(new String[0]);
+            if (files.length > 0) {
+                int idx = cycleIdx.getAndUpdate(i -> (i + 1) % files.length);
+                SwingUtilities.invokeLater(() -> mainStatusLabel.setText(String.format("Downloading: %d/%d %s", mainProgressbar.getValue(), mainProgressbar.getMaximum(), files[idx])));
+            }
+        });
+        cycleTimer.start();
 
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
@@ -633,8 +651,24 @@ public class Initializer {
         }
     }
     
-    public synchronized static void addProgress() {
+    public synchronized static void addProgress(String fileName) {
+        activeDownloads.remove(fileName);
         mainProgressbar.setValue(mainProgressbar.getValue() + 1);
+    }
+
+    public static void setCurrentFile(String name) {
+        if (name == null) {
+            activeDownloads.clear();
+        } else {
+            activeDownloads.add(name);
+        }
+        updateStatusLabel();
+    }
+
+    private static void updateStatusLabel() {
+        String[] files = activeDownloads.toArray(new String[0]);
+        String file = files.length > 0 ? " " + files[cycleIdx.get() % files.length] : "";
+        mainStatusLabel.setText(String.format("Downloading: %d/%d%s", mainProgressbar.getValue(), mainProgressbar.getMaximum(), file));
     }
     
     private static class LinkButton extends JButton{
