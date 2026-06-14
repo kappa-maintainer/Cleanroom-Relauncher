@@ -16,7 +16,7 @@ public class CleanroomVersionParser {
             return CleanroomVersionParser.version;
         }
         Relauncher.LOGGER.info("Parsing latest Cleanroom versions");
-        Initializer.getMainStatusLabel().setText("Parsing latest Cleanroom versions");
+        Initializer.getMainStatusLabel().setText(Messages.get("status.parsing_versions"));
         File metadata = new File(Relauncher.workingDir, "maven-metadata.xml");
         String version = "0.3.19-alpha";
 
@@ -41,7 +41,7 @@ public class CleanroomVersionParser {
             }
         }
         Relauncher.LOGGER.info("Found version {}", version);
-        Initializer.getMainStatusLabel().setText("Found version " + version);
+        Initializer.getMainStatusLabel().setText(Messages.get("status.found_version", version));
         reader.close();
         CleanroomVersionParser.version = version;
         return version;

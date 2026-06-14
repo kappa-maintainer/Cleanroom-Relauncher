@@ -66,20 +66,20 @@ public class Initializer {
         }
         mainFrame.setLayout(new MigLayout("", "[][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
 
-        JLabel pathLabel = new JLabel("Java Path*");
+        JLabel pathLabel = new JLabel(Messages.get("label.java_path"));
         JTextField pathText = new JTextField();
         JLabel jvmStatus = new JLabel(invalid);
         JFileChooser jvmPicker = getJavaFileChooser();
-        JButton detectJvmButton = new JButton("Detect Java");
-        JButton browserButton = new JButton("Browse Java");
-        JLabel argsLabel = new JLabel("Java Args");
+        JButton detectJvmButton = new JButton(Messages.get("button.detect_java"));
+        JButton browserButton = new JButton(Messages.get("button.browse_java"));
+        JLabel argsLabel = new JLabel(Messages.get("label.java_args"));
         JTextArea args = new JTextArea(1, 0);
         args.setLineWrap(true);
         args.setWrapStyleWord(false);
         JScrollPane argsScroll = new JScrollPane(args);
         argsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         argsScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        JButton advSetting = new JButton("Advanced Settings");
+        JButton advSetting = new JButton(Messages.get("button.advanced_settings"));
 
         setInteractable = value -> {
             launchButton.setEnabled(value);
@@ -91,7 +91,7 @@ public class Initializer {
             advSetting.setEnabled(value);
         };
 
-        launchButton = new JButton("Launch");
+        launchButton = new JButton(Messages.get("button.launch"));
         launchButton.setEnabled(false);
         // java related
         mainFrame.add(pathLabel, "cell 0 0, grow");
@@ -136,7 +136,7 @@ public class Initializer {
         launchButton.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(launchButton, Font.BOLD, 20);
 
-        mainFrame.setTitle("Relauncher Initialization Settings");
+        mainFrame.setTitle(Messages.get("window.title"));
         mainFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         mainFrame.addWindowListener(new WindowAdapter() {
             @Override
@@ -146,7 +146,7 @@ public class Initializer {
         });
         
         pathLabel.setHorizontalAlignment(JLabel.CENTER);
-        pathText.setToolTipText("Input your Java 21+ executable here");
+        pathText.setToolTipText(Messages.get("tooltip.java_path"));
 
         detectJvmButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(detectJvmButton)) {
@@ -277,13 +277,13 @@ public class Initializer {
         mainProgressbar.setIndeterminate(true);
         mainProgressbar.addChangeListener(changeEvent -> updateStatusLabel());
         mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
-        mainStatusLabel.setText("Status: Idle");
+        mainStatusLabel.setText(Messages.get("status.idle"));
 
         cycleTimer = new Timer(1500, e -> {
             String[] files = activeDownloads.toArray(new String[0]);
             if (files.length > 0) {
                 int idx = cycleIdx.getAndUpdate(i -> (i + 1) % files.length);
-                SwingUtilities.invokeLater(() -> mainStatusLabel.setText(String.format("Downloading: %d/%d %s", mainProgressbar.getValue(), mainProgressbar.getMaximum(), files[idx])));
+                SwingUtilities.invokeLater(() -> mainStatusLabel.setText(Messages.get("status.downloading", mainProgressbar.getValue(), mainProgressbar.getMaximum(), files[idx])));
             }
         });
         cycleTimer.start();
@@ -317,7 +317,7 @@ public class Initializer {
 
             @Override
             public String getDescription() {
-                return "Java executable, javaw.exe on Windows and java on other OS";
+                return Messages.get("filter.java_executable");
             }
         });
         jvmPicker.setFileHidingEnabled(false);
@@ -372,10 +372,10 @@ public class Initializer {
         ));
         DefaultListModel<JVMInfo> model = new DefaultListModel<>();
         JList<JVMInfo> list = new JList<>(model);
-        JLabel info = new JLabel("Status: Idle");
+        JLabel info = new JLabel(Messages.get("status.idle"));
         info.setHorizontalAlignment(JLabel.CENTER);
-        JButton confirm = new JButton("Confirm");
-        JButton cancel = new JButton("Cancel");
+        JButton confirm = new JButton(Messages.get("button.confirm"));
+        JButton cancel = new JButton(Messages.get("button.cancel"));
         
         detector.add(list, "cell 0 0 2 2, grow");
         GUIUtils.enlargeFont(list);
@@ -415,7 +415,7 @@ public class Initializer {
 
         cancel.setEnabled(false);
         confirm.setEnabled(false);
-        info.setText("Scanning...");
+        info.setText(Messages.get("status.scanning"));
         Relauncher.LOGGER.info("Scanning...");
         detector.pack();
         GUIUtils.setCentral(detector);
@@ -430,7 +430,7 @@ public class Initializer {
             }
             cancel.setEnabled(true);
             confirm.setEnabled(true);
-            info.setText("Scan complete.");
+            info.setText(Messages.get("status.scan_complete"));
             detector.pack();
             GUIUtils.setCentral(detector);
         });
@@ -446,35 +446,35 @@ public class Initializer {
                 "[grow][grow][grow][grow][grow][grow][grow][grow]"
         ));
         advSetting.setFocusableWindowState(true);
-        JLabel libraryPathLabel = new JLabel("Library Path");
+        JLabel libraryPathLabel = new JLabel(Messages.get("label.library_path"));
         libraryPathLabel.setHorizontalAlignment(JLabel.CENTER);
         JTextField libraryPathText = new JTextField();
         libraryPathText.setText(Config.libraryPath);
-        JButton cancel = new JButton("Cancel");
-        JButton confirm = new JButton("Confirm");
+        JButton cancel = new JButton(Messages.get("button.cancel"));
+        JButton confirm = new JButton(Messages.get("button.confirm"));
         JFileChooser libraryPicker = getLibraryPathChooser();
-        JCheckBox groupNameInPathCheckbox = new JCheckBox("Place Libraries in Group Name");
+        JCheckBox groupNameInPathCheckbox = new JCheckBox(Messages.get("checkbox.place_libs_in_group"));
         groupNameInPathCheckbox.setSelected(Config.respectLibraryStructure);
-        JButton libraryBrowserButton = new JButton("Browser...");
-        JLabel proxyLabel = new JLabel("Proxy Host");
+        JButton libraryBrowserButton = new JButton(Messages.get("button.browser"));
+        JLabel proxyLabel = new JLabel(Messages.get("label.proxy_host"));
         proxyLabel.setHorizontalAlignment(JLabel.CENTER);
-        JLabel proxyPortLabel = new JLabel("Proxy Port");
+        JLabel proxyPortLabel = new JLabel(Messages.get("label.proxy_port"));
         proxyPortLabel.setHorizontalAlignment(JLabel.CENTER);
         JTextField proxyAddrTextField = new JTextField();
         proxyAddrTextField.setText(Config.proxyAddr);
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
-        JCheckBox useLocalCheckbox = new JCheckBox("Use Local MMC Pack");
+        JCheckBox useLocalCheckbox = new JCheckBox(Messages.get("checkbox.use_local_pack"));
         useLocalCheckbox.setSelected(Config.useLocalPack);
-        JCheckBox chineseModeCheckbox = new JCheckBox("Use Chinese Main Land Mirror");
+        JCheckBox chineseModeCheckbox = new JCheckBox(Messages.get("checkbox.chinese_mirror"));
         chineseModeCheckbox.setSelected(Config.chineseMode);
-        JLabel maxRetryLabel = new JLabel("Max retry");
+        JLabel maxRetryLabel = new JLabel(Messages.get("label.max_retry"));
         maxRetryLabel.setHorizontalAlignment(JLabel.CENTER);
         JSpinner maxRetrySpinner = new JSpinner(new SpinnerNumberModel(Config.maxRetry, 1, 65535, 1));
-        JLabel maxSessionLabel = new JLabel("Max sessions");
+        JLabel maxSessionLabel = new JLabel(Messages.get("label.max_sessions"));
         maxSessionLabel.setHorizontalAlignment(JLabel.CENTER);
         JSpinner maxSessionSpinner = new JSpinner(new SpinnerNumberModel(Config.maxDownloadSession, 1, 65535, 1));
 
-        libraryPathText.setToolTipText("Path to place the libraries, leave it empty to use default location");
+        libraryPathText.setToolTipText(Messages.get("tooltip.library_path"));
 
         advSetting.add(libraryPathLabel, "cell 0 0, grow");
         GUIUtils.enlargeFont(libraryPathLabel);
@@ -517,9 +517,9 @@ public class Initializer {
         advSetting.add(confirm, "cell 2 7 2 1, grow");
         GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
         
-        groupNameInPathCheckbox.setToolTipText("Place libraries in their corresponding groups. Useful when you want to reuse libraries with the launcher.");
+        groupNameInPathCheckbox.setToolTipText(Messages.get("tooltip.place_libs_in_group"));
         
-        chineseModeCheckbox.setToolTipText("Use mirror and proxy sites to speed up download from Chinese main land.");
+        chineseModeCheckbox.setToolTipText(Messages.get("tooltip.chinese_mirror"));
 
         
         libraryBrowserButton.addActionListener(actionEvent -> {
@@ -533,11 +533,11 @@ public class Initializer {
         });
         
 
-        useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");
+        useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack"));
 
-        proxyAddrTextField.setToolTipText("Proxy Address, leave it empty means no proxy");
+        proxyAddrTextField.setToolTipText(Messages.get("tooltip.proxy_addr"));
         
-        portSpinner.setToolTipText("Proxy Port, leave it 0 means no proxy");
+        portSpinner.setToolTipText(Messages.get("tooltip.proxy_port"));
         portSpinner.setModel(new SpinnerNumberModel());
         
         
@@ -577,25 +577,25 @@ public class Initializer {
         warning.setLayout(new MigLayout());
         JLabel icon = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
         GUIUtils.enlargeFont(icon);
-        JLabel oldJava = new JLabel("You are using an outdated Java VM, relauncher may hang and need manually retry.");
+        JLabel oldJava = new JLabel(Messages.get("warning.outdated_java"));
         oldJava.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(oldJava);
-        JLabel oldJava2 = new JLabel("To avoid potential malfunction, please click the button to download latest java 8.");
+        JLabel oldJava2 = new JLabel(Messages.get("warning.download_java8"));
         oldJava2.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(oldJava2);
         LinkButton java8button = new LinkButton("https://adoptium.net/temurin/releases?version=8&os=any&arch=any");
         GUIUtils.enlargeFont(java8button);
-        JLabel newJava = new JLabel("You will need at least one Java 21+ JRE installed to use relauncher.");
+        JLabel newJava = new JLabel(Messages.get("warning.need_java21"));
         newJava.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(newJava);
-        JLabel newJava2 = new JLabel("If you don't, please click the button to download one.");
+        JLabel newJava2 = new JLabel(Messages.get("warning.download_java21"));
         newJava2.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(newJava2);
         LinkButton java21button = new LinkButton("https://adoptium.net/temurin/releases?version=21&os=any&arch=any");
         GUIUtils.enlargeFont(java21button);
-        JButton confirm = new JButton("Continue");
+        JButton confirm = new JButton(Messages.get("button.continue"));
         GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
-        JButton quit = new JButton("Quit");
+        JButton quit = new JButton(Messages.get("button.quit"));
         GUIUtils.enlargeFont(quit);
         
         warning.add(icon, "cell 0 0 2 1, grow");
@@ -667,8 +667,11 @@ public class Initializer {
 
     private static void updateStatusLabel() {
         String[] files = activeDownloads.toArray(new String[0]);
-        String file = files.length > 0 ? " " + files[cycleIdx.get() % files.length] : "";
-        mainStatusLabel.setText(String.format("Downloading: %d/%d%s", mainProgressbar.getValue(), mainProgressbar.getMaximum(), file));
+        if (files.length > 0) {
+            mainStatusLabel.setText(Messages.get("status.downloading", mainProgressbar.getValue(), mainProgressbar.getMaximum(), files[cycleIdx.get() % files.length]));
+        } else {
+            mainStatusLabel.setText(Messages.get("status.downloading_count", mainProgressbar.getValue(), mainProgressbar.getMaximum()));
+        }
     }
     
     private static class LinkButton extends JButton{

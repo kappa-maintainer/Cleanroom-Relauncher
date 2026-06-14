@@ -25,14 +25,14 @@ public class MMCInstaller {
     public static void showGUI() {
         mainFrame.setLayout(new MigLayout());
 
-        JLabel host = new JLabel("Proxy Host");
+        JLabel host = new JLabel(Messages.get("label.proxy_host"));
         JTextField proxyAddrTextField = new JTextField();
         proxyAddrTextField.setText(Config.proxyAddr);
 
-        JLabel port = new JLabel("Proxy Port");
+        JLabel port = new JLabel(Messages.get("label.proxy_port"));
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(0, 0, 65535, 1));
         portSpinner.setValue(Config.proxyPort);
-        JCheckBox useLocalCheckbox = new JCheckBox("Use Local Pack");
+        JCheckBox useLocalCheckbox = new JCheckBox(Messages.get("checkbox.use_local_pack"));
 
         JSeparator jSeparator1 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator2 = new JSeparator(JSeparator.HORIZONTAL);
@@ -46,7 +46,7 @@ public class MMCInstaller {
             useLocalCheckbox.setEnabled(value);
         };
 
-        confirmButton = new JButton("Confirm");
+        confirmButton = new JButton(Messages.get("button.confirm"));
         
         mainFrame.add(useLocalCheckbox, "cell 0 0 2 1, grow, align center");
         GUIUtils.enlargeFont(useLocalCheckbox);
@@ -80,7 +80,7 @@ public class MMCInstaller {
         GUIUtils.enlargeFont(confirmButton, Font.BOLD, 20);
         confirmButton.setMinimumSize(new Dimension(width, 10));
 
-        mainFrame.setTitle("Relauncher Initialization Settings");
+        mainFrame.setTitle(Messages.get("window.title"));
         mainFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
         mainFrame.addWindowListener(new WindowAdapter() {
             @Override
@@ -100,7 +100,7 @@ public class MMCInstaller {
                 try {
                     Thread workingThread = new Thread(() -> {
                         try {
-                            mainStatusLabel.setText("Installing Cleanroom...");
+                            mainStatusLabel.setText(Messages.get("status.installing"));
                             MMCPackDownloader.downloadAndExtract();
                             File packDir = new File(Relauncher.workingDir, "mmcpack").getAbsoluteFile();
                             File instance = Launch.minecraftHome.getParentFile();
@@ -144,26 +144,26 @@ public class MMCInstaller {
         });
 
 
-        useLocalCheckbox.setToolTipText("Will use first Cleanroom-MMC-instance-*.zip in relauncher dir");
+        useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack"));
         useLocalCheckbox.setSelected(Config.useLocalPack);
         proxyAddrTextField.setText(Config.proxyAddr);
         portSpinner.setValue(Config.proxyPort);
 
-        useLocalCheckbox.setToolTipText("Use the pack placed in /relauncher. Will disable proxy settings.");
+        useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack_mmc"));
         useLocalCheckbox.addItemListener(itemEvent -> {
             boolean selected = itemEvent.getStateChange() == ItemEvent.SELECTED;
             portSpinner.setEnabled(!selected);
             proxyAddrTextField.setEnabled(!selected);
         });
 
-        proxyAddrTextField.setToolTipText("Proxy Address");
+        proxyAddrTextField.setToolTipText(Messages.get("tooltip.proxy_addr"));
         proxyAddrTextField.setEnabled(!useLocalCheckbox.isSelected());
 
         portSpinner.setEnabled(!useLocalCheckbox.isSelected());
-        portSpinner.setToolTipText("Proxy Port");
+        portSpinner.setToolTipText(Messages.get("tooltip.proxy_port"));
         portSpinner.setModel(new SpinnerNumberModel());
 
-        mainStatusLabel.setText("Status: Idle");
+        mainStatusLabel.setText(Messages.get("status.idle"));
         mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
         
 
@@ -186,10 +186,10 @@ public class MMCInstaller {
 
     private static JDialog finishedDialog() {
         JDialog dialog = new JDialog();
-        JTextArea area = new JTextArea("MMC pack installation complete. After clicking the quit button, please:\n1. Switch your java in instance settings to Java 21+\n2. Make sure you have installed Scalar Legacy and Fugue");
+        JTextArea area = new JTextArea(Messages.get("mmc.complete_message"));
         area.setFocusable(false);
         GUIUtils.enlargeFont(area, Font.BOLD, 20);
-        JButton quit = new JButton("Quit");
+        JButton quit = new JButton(Messages.get("button.quit"));
         GUIUtils.enlargeFont(quit, Font.BOLD, 20);
         quit.setActionCommand("quit");
         quit.addActionListener(actionEvent -> {
