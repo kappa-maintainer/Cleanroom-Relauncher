@@ -147,6 +147,8 @@ public class Initializer {
         
         pathText.setText(Config.javaPath);
         args.setText(Config.jvmArgs);
+        args.setToolTipText(args.getText());
+        argsScroll.setToolTipText(args.getText());
         
         advSetting.addActionListener(actionEvent -> showAdvancedSettingDialog());
 
@@ -256,7 +258,8 @@ public class Initializer {
             }
 
             private void onChange() {
-                args.setToolTipText(pathText.getText());
+                args.setToolTipText(args.getText());
+                argsScroll.setToolTipText(args.getText());
             }
         });
 
