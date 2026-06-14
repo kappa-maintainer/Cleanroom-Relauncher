@@ -14,8 +14,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSpinner;
+import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
@@ -53,7 +55,7 @@ public class Initializer {
         if (JavaDetector.getInstalledJVMs().isEmpty()) {
             checkJavaAndWarn();
         }
-        mainFrame.setLayout(new MigLayout("", "[grow][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
+        mainFrame.setLayout(new MigLayout("", "[][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
 
         JLabel pathLabel = new JLabel("Java Path*");
         JTextField pathText = new JTextField();
@@ -62,7 +64,12 @@ public class Initializer {
         JButton detectJvmButton = new JButton("Detect Java");
         JButton browserButton = new JButton("Browse Java");
         JLabel argsLabel = new JLabel("Java Args");
-        JTextField args = new JTextField();
+        JTextArea args = new JTextArea(1, 0);
+        args.setLineWrap(true);
+        args.setWrapStyleWord(false);
+        JScrollPane argsScroll = new JScrollPane(args);
+        argsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        argsScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         JButton advSetting = new JButton("Advanced Settings");
 
         setInteractable = value -> {
@@ -71,6 +78,7 @@ public class Initializer {
             detectJvmButton.setEnabled(value);
             browserButton.setEnabled(value);
             args.setEnabled(value);
+            argsScroll.setEnabled(value);
             advSetting.setEnabled(value);
         };
 
@@ -96,8 +104,8 @@ public class Initializer {
         mainFrame.add(argsLabel, "cell 0 3, grow");
         argsLabel.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(argsLabel);
-        mainFrame.add(args, "cell 1 3 3 1, grow");
-        args.setMinimumSize(new Dimension(300, 10));
+        mainFrame.add(argsScroll, "cell 1 3 3 1, grow");
+        argsScroll.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(args);
 
         // adv settings

@@ -38,9 +38,9 @@ public class Config {
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, "", "Library path, you may point it to launcher's library path for re-using, empty for default relauncher/");
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, 5, 1, 65535, "Maximum attempts on downloading file.");
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, 5, 1, 65535, "Maximum session count when downloading multiple files.");
-        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, false, "Use mirror and proxy that makes downloading from Chinese main land faster;");
-        booted = forgeConfig.getBoolean("Booted once", categoryGeneral, false, "Config flag to check if this was booted, DO NOT EDIT");
-        classPath = forgeConfig.getString("Class Path", categoryGeneral, "", "Class path used to launch, DO NOT EDIT");
+        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, false, "Use mirror and proxy that makes downloading from Chinese main land faster.");
+        booted = forgeConfig.getBoolean("Booted once", categoryGeneral, false, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
+        classPath = forgeConfig.getString("Class Path", categoryGeneral, "", "Class path used to launch");
         
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();
@@ -59,9 +59,9 @@ public class Config {
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, libraryPath, "Library path, you may point it to launcher's library path for re-using, empty for default relauncher/");
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, maxRetry, 1, 65535, "Maximum attempts on downloading file.");
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, maxDownloadSession, 1, 65535, "Maximum session count when downloading multiple files.");
-        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, chineseMode, "Use mirror and proxy that makes downloading from Chinese main land faster;");
-        booted = forgeConfig.getBoolean("Booted once", categoryGeneral, booted, "Config flag to check if this was booted, DO NOT EDIT");
-        classPath = forgeConfig.getString("Class Path", categoryGeneral, classPath, "Class path used to launch, DO NOT EDIT");
+        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, chineseMode, "Use mirror and proxy that makes downloading from Chinese main land faster.");
+        booted = forgeConfig.getBoolean("Booted once", categoryGeneral, booted, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
+        classPath = forgeConfig.getString("Class Path", categoryGeneral, classPath, "Class path used to launch");
 
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();
