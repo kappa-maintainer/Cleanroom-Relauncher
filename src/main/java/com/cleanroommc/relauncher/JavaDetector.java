@@ -4,6 +4,7 @@ import com.cleanroommc.javautils.api.JavaInstall;
 import com.cleanroommc.javautils.spi.JavaLocator;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -24,9 +25,16 @@ public class JavaDetector {
             }
         }
         for (JavaInstall install : javaInstalls) {
-            String path = install.executable(true).toString();
-            if (!javaPaths.contains(path)) {
-                javaPaths.add(path);
+            Path exec = install.executable(true);
+            String path = exec.toString();
+            String dedupKey;
+            try {
+                dedupKey = exec.toRealPath().toString();
+            } catch (IOException e) {
+                dedupKey = path;
+            }
+            if (!javaPaths.contains(dedupKey)) {
+                javaPaths.add(dedupKey);
                 JVMInfo info = new JVMInfo(path);
                 if (info.getSpecification() >= 21) {
                     out.add(info);
