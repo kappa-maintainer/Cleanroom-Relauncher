@@ -18,6 +18,7 @@ public class Config {
     public static int maxDownloadSession;
     public static boolean chineseMode;
     public static boolean showConfigGUI;
+    public static boolean alwaysShowConfigGUI;
     public static String classPath;
 
 
@@ -25,21 +26,25 @@ public class Config {
     public static final File configFile = new File(new File(Launch.minecraftHome, "config"), "cleanroom_relauncher.cfg");
     private static Configuration forgeConfig = new Configuration(configFile);
     private static final String categoryGeneral = "General";
-    
+
+    static Configuration getForgeConfig() {
+        return forgeConfig;
+    }
 
     public static void syncConfig() {
-        useLocalPack = forgeConfig.getBoolean("Use Local MMC Pack", categoryGeneral, false, "Search for relauncher/Cleanroom-MMC-instance-*.zip and install from there");
-        proxyAddr = forgeConfig.getString("Proxy Address", categoryGeneral, "", "Proxy address");
-        proxyPort = forgeConfig.getInt("Proxy Port", categoryGeneral, 0, 0, 65535, "Proxy Port");
-        javaPath = forgeConfig.getString("Java Path", categoryGeneral, "", "Path to javaw.exe or java binary");
-        jvmArgs = forgeConfig.getString("JVM Arguments", categoryGeneral, "-Xmx4g -Xms4g", "Arguments for Java 21 jvm");
-        respectLibraryStructure = forgeConfig.getBoolean("Respect Library Structure", categoryGeneral, true, "Put library files under directory of their group name");
-        libraryPath = forgeConfig.getString("Library Path", categoryGeneral, "", "Library path, you may point it to launcher's library path for re-using, empty for default relauncher/");
-        maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, 5, 1, 65535, "Maximum attempts on downloading file.");
-        maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, 5, 1, 65535, "Maximum session count when downloading multiple files.");
-        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, false, "Use mirror and proxy that makes downloading from Chinese main land faster.");
-        showConfigGUI = forgeConfig.getBoolean("Booted once", categoryGeneral, true, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
-        classPath = forgeConfig.getString("Class Path", categoryGeneral, "", "Class path used to launch");
+        showConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.show_config_gui"), categoryGeneral, true, Messages.get("config.show_config_gui"));
+        useLocalPack = forgeConfig.getBoolean(Messages.get("config.name.use_local_pack"), categoryGeneral, false, Messages.get("config.use_local_pack"));
+        proxyAddr = forgeConfig.getString(Messages.get("config.name.proxy_addr"), categoryGeneral, "", Messages.get("config.proxy_addr"));
+        proxyPort = forgeConfig.getInt(Messages.get("config.name.proxy_port"), categoryGeneral, 0, 0, 65535, Messages.get("config.proxy_port"));
+        javaPath = forgeConfig.getString(Messages.get("config.name.java_path"), categoryGeneral, "", Messages.get("config.java_path"));
+        jvmArgs = forgeConfig.getString(Messages.get("config.name.jvm_args"), categoryGeneral, "-Xmx4g -Xms4g", Messages.get("config.jvm_args"));
+        respectLibraryStructure = forgeConfig.getBoolean(Messages.get("config.name.respect_library_structure"), categoryGeneral, true, Messages.get("config.respect_library_structure"));
+        libraryPath = forgeConfig.getString(Messages.get("config.name.library_path"), categoryGeneral, "", Messages.get("config.library_path"));
+        maxRetry = forgeConfig.getInt(Messages.get("config.name.max_retry"), categoryGeneral, 5, 1, 65535, Messages.get("config.max_retry"));
+        maxDownloadSession = forgeConfig.getInt(Messages.get("config.name.max_download_session"), categoryGeneral, 5, 1, 65535, Messages.get("config.max_download_session"));
+        chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, false, Messages.get("config.chinese_mode"));
+        alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, false, Messages.get("config.always_show_config"));
+        classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, "", Messages.get("config.class_path"));
         
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();
@@ -49,18 +54,19 @@ public class Config {
     public static void save() {
         FileUtils.deleteQuietly(configFile);
         forgeConfig = new Configuration(configFile);
-        useLocalPack = forgeConfig.getBoolean("Use Local MMC Pack", categoryGeneral, useLocalPack, "Search for relauncher/Cleanroom-MMC-instance-*.zip and install from there");
-        proxyAddr = forgeConfig.getString("Proxy Address", categoryGeneral, proxyAddr, "Proxy address");
-        proxyPort = forgeConfig.getInt("Proxy Port", categoryGeneral, proxyPort, 0, 65535, "Proxy Port");
-        javaPath = forgeConfig.getString("Java Path", categoryGeneral, javaPath, "Path to javaw.exe or java binary");
-        jvmArgs = forgeConfig.getString("JVM Arguments", categoryGeneral, jvmArgs, "Arguments for Java 21 jvm");
-        respectLibraryStructure = forgeConfig.getBoolean("Respect Library Structure", categoryGeneral, respectLibraryStructure, "Put library files under directory of their group name");
-        libraryPath = forgeConfig.getString("Library Path", categoryGeneral, libraryPath, "Library path, you may point it to launcher's library path for re-using, empty for default relauncher/");
-        maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, maxRetry, 1, 65535, "Maximum attempts on downloading file.");
-        maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, maxDownloadSession, 1, 65535, "Maximum session count when downloading multiple files.");
-        chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, chineseMode, "Use mirror and proxy that makes downloading from Chinese main land faster.");
-        showConfigGUI = forgeConfig.getBoolean("Booted once", categoryGeneral, showConfigGUI, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
-        classPath = forgeConfig.getString("Class Path", categoryGeneral, classPath, "Class path used to launch");
+        showConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.show_config_gui"), categoryGeneral, showConfigGUI, Messages.get("config.show_config_gui"));
+        useLocalPack = forgeConfig.getBoolean(Messages.get("config.name.use_local_pack"), categoryGeneral, useLocalPack, Messages.get("config.use_local_pack"));
+        proxyAddr = forgeConfig.getString(Messages.get("config.name.proxy_addr"), categoryGeneral, proxyAddr, Messages.get("config.proxy_addr"));
+        proxyPort = forgeConfig.getInt(Messages.get("config.name.proxy_port"), categoryGeneral, proxyPort, 0, 65535, Messages.get("config.proxy_port"));
+        javaPath = forgeConfig.getString(Messages.get("config.name.java_path"), categoryGeneral, javaPath, Messages.get("config.java_path"));
+        jvmArgs = forgeConfig.getString(Messages.get("config.name.jvm_args"), categoryGeneral, jvmArgs, Messages.get("config.jvm_args"));
+        respectLibraryStructure = forgeConfig.getBoolean(Messages.get("config.name.respect_library_structure"), categoryGeneral, respectLibraryStructure, Messages.get("config.respect_library_structure"));
+        libraryPath = forgeConfig.getString(Messages.get("config.name.library_path"), categoryGeneral, libraryPath, Messages.get("config.library_path"));
+        maxRetry = forgeConfig.getInt(Messages.get("config.name.max_retry"), categoryGeneral, maxRetry, 1, 65535, Messages.get("config.max_retry"));
+        maxDownloadSession = forgeConfig.getInt(Messages.get("config.name.max_download_session"), categoryGeneral, maxDownloadSession, 1, 65535, Messages.get("config.max_download_session"));
+        chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, chineseMode, Messages.get("config.chinese_mode"));
+        alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, alwaysShowConfigGUI, Messages.get("config.always_show_config"));
+        classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, classPath, Messages.get("config.class_path"));
 
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();

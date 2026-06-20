@@ -1,6 +1,5 @@
 package com.cleanroommc.relauncher;
 
-import com.google.common.base.Strings;
 import net.miginfocom.swing.MigLayout;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
@@ -467,6 +466,8 @@ public class Initializer {
         useLocalCheckbox.setSelected(Config.useLocalPack);
         JCheckBox chineseModeCheckbox = new JCheckBox(Messages.get("checkbox.chinese_mirror"));
         chineseModeCheckbox.setSelected(Config.chineseMode);
+        JCheckBox alwaysShowConfigCheckbox = new JCheckBox(Messages.get("checkbox.always_show_config"));
+        alwaysShowConfigCheckbox.setSelected(Config.alwaysShowConfigGUI);
         JLabel maxRetryLabel = new JLabel(Messages.get("label.max_retry"));
         maxRetryLabel.setHorizontalAlignment(JLabel.CENTER);
         JSpinner maxRetrySpinner = new JSpinner(new SpinnerNumberModel(Config.maxRetry, 1, 65535, 1));
@@ -487,10 +488,12 @@ public class Initializer {
         
         advSetting.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 2 4 1, grow");
 
-        advSetting.add(chineseModeCheckbox, "cell 0 3 2 1, grow");
+        advSetting.add(chineseModeCheckbox, "cell 0 3 1 1, grow");
         GUIUtils.enlargeFont(chineseModeCheckbox);
-        advSetting.add(useLocalCheckbox, "cell 2 3 2 1, grow");
+        advSetting.add(useLocalCheckbox, "cell 1 3 1 1, grow");
         GUIUtils.enlargeFont(useLocalCheckbox);
+        advSetting.add(alwaysShowConfigCheckbox, "cell 2 3 2 1, grow");
+        GUIUtils.enlargeFont(alwaysShowConfigCheckbox);
         
         advSetting.add(proxyLabel, "cell 0 4, grow");
         GUIUtils.enlargeFont(proxyLabel);
@@ -521,7 +524,7 @@ public class Initializer {
         
         chineseModeCheckbox.setToolTipText(Messages.get("tooltip.chinese_mirror"));
 
-        
+        alwaysShowConfigCheckbox.setToolTipText(Messages.get("tooltip.always_show_config"));
         libraryBrowserButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(libraryBrowserButton)) {
                 GUIUtils.setCentral(libraryPicker);
@@ -559,6 +562,7 @@ public class Initializer {
                 Config.maxDownloadSession = (int) maxSessionSpinner.getValue();
                 Config.maxRetry = (int) maxRetrySpinner.getValue();
                 Config.respectLibraryStructure = groupNameInPathCheckbox.isSelected();
+                Config.alwaysShowConfigGUI = alwaysShowConfigCheckbox.isSelected();
             }
         });
 

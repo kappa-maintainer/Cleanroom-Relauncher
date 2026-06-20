@@ -18,7 +18,7 @@ public class CleanroomVersionParser {
         Relauncher.LOGGER.info("Parsing latest Cleanroom versions");
         Initializer.getMainStatusLabel().setText(Messages.get("status.parsing_versions"));
         File metadata = new File(Relauncher.workingDir, "maven-metadata.xml");
-        String version = "0.3.19-alpha";
+        String version = "0.5.14-alpha";
 
         Relauncher.LOGGER.info("Downloading metadata");
         List<DownloadEntry> list = new ArrayList<>(1);

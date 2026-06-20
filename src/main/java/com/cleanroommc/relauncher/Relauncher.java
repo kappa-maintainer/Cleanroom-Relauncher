@@ -14,7 +14,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.Map;
 
@@ -35,25 +34,22 @@ public class Relauncher implements IFMLLoadingPlugin {
                 workingDir.mkdirs();
             }
             LOGGER.info("Checking config");
-            boolean configExists = Files.exists(new File(new File(Launch.minecraftHome, "config"), "cleanroom_relauncher.cfg").toPath());
-            if (configExists) {
-                Config.syncConfig();
-            } else {
-                LOGGER.info("No config found, creating...");
-            }
+            Config.syncConfig();
             if (entry.startsWith("org.prismlauncher") || entry.startsWith("org.multimc") || entry.startsWith("org.polymc")) {
                 MMCInstaller.showGUI();
             } else {
-                if (Config.showConfigGUI) {
-                    Initializer.InitJavaAndArg();
-                }
-                Initializer.hideWindow();
-                List<String> args = ArgumentGetter.getLaunchArgs();
-                ProcessBuilder relaunch = new ProcessBuilder(args);
-                try {
-                    Process p = relaunch.directory(Launch.minecraftHome).inheritIO().start();
+            if (Config.alwaysShowConfigGUI || Config.showConfigGUI) {
+                Initializer.InitJavaAndArg();
+            }
+            Initializer.hideWindow();
+            List<String> args = ArgumentGetter.getLaunchArgs();
+            ProcessBuilder relaunch = new ProcessBuilder(args);
+            try {
+                Process p = relaunch.directory(Launch.minecraftHome).inheritIO().start();
+                if (!Config.alwaysShowConfigGUI) {
                     Config.showConfigGUI = false;
-                    Config.save();
+                }
+                Config.save();
                     Runtime.getRuntime().addShutdownHook(new Thread(p::destroy));
                     BufferedReader inputReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
                     BufferedReader errorReader = new BufferedReader(new InputStreamReader(p.getErrorStream()));
@@ -74,8 +70,9 @@ public class Relauncher implements IFMLLoadingPlugin {
 
             }
             ExitWrapper.exit(0);
+        } else {
+            Messages.getLocale();
         }
-        // Do nothing on Java 9+
     }
 
     private static boolean isServer(StackTraceElement[] stack) {
@@ -94,7 +91,7 @@ public class Relauncher implements IFMLLoadingPlugin {
 
     @Override
     public String getModContainerClass() {
-        return null;
+        return "com.cleanroommc.relauncher.RelauncherModContainer";
     }
 
     @Nullable

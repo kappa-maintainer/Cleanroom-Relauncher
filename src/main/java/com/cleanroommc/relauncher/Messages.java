@@ -13,9 +13,11 @@ import java.util.ResourceBundle;
 
 public class Messages {
     private static final ResourceBundle bundle;
+    private static final Locale locale = Locale.getDefault();
 
     static {
-        Locale locale = Locale.getDefault();
+        Relauncher.LOGGER.info("Locale null? {}", locale == null);
+        Relauncher.LOGGER.info("Locale is {}", locale);
         bundle = ResourceBundle.getBundle("com.cleanroommc.relauncher.messages", locale, new UTF8Control());
     }
 
@@ -34,7 +36,7 @@ public class Messages {
     private static class UTF8Control extends ResourceBundle.Control {
         @Override
         public ResourceBundle newBundle(String baseName, Locale locale, String format, ClassLoader loader, boolean reload)
-                throws IllegalAccessException, InstantiationException, IOException {
+                throws IOException {
             String bundleName = toBundleName(baseName, locale);
             String resourceName = toResourceName(bundleName, "properties");
             ResourceBundle bundle = null;
