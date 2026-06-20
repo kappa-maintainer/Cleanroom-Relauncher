@@ -5,7 +5,6 @@ import net.minecraftforge.common.config.Configuration;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
-import java.nio.file.Files;
 
 public class Config {
     public static String javaPath;
@@ -18,7 +17,7 @@ public class Config {
     public static int maxRetry;
     public static int maxDownloadSession;
     public static boolean chineseMode;
-    public static boolean booted;
+    public static boolean showConfigGUI;
     public static String classPath;
 
 
@@ -39,7 +38,7 @@ public class Config {
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, 5, 1, 65535, "Maximum attempts on downloading file.");
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, 5, 1, 65535, "Maximum session count when downloading multiple files.");
         chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, false, "Use mirror and proxy that makes downloading from Chinese main land faster.");
-        booted = forgeConfig.getBoolean("Booted once", categoryGeneral, false, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
+        showConfigGUI = forgeConfig.getBoolean("Booted once", categoryGeneral, true, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
         classPath = forgeConfig.getString("Class Path", categoryGeneral, "", "Class path used to launch");
         
         if (forgeConfig.hasChanged()) {
@@ -60,7 +59,7 @@ public class Config {
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, maxRetry, 1, 65535, "Maximum attempts on downloading file.");
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, maxDownloadSession, 1, 65535, "Maximum session count when downloading multiple files.");
         chineseMode = forgeConfig.getBoolean("Chinese Main Land Mode", categoryGeneral, chineseMode, "Use mirror and proxy that makes downloading from Chinese main land faster.");
-        booted = forgeConfig.getBoolean("Booted once", categoryGeneral, booted, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
+        showConfigGUI = forgeConfig.getBoolean("Booted once", categoryGeneral, showConfigGUI, "Config flag to check if this was booted, set this to false will show config GUI instead of just launch");
         classPath = forgeConfig.getString("Class Path", categoryGeneral, classPath, "Class path used to launch");
 
         if (forgeConfig.hasChanged()) {

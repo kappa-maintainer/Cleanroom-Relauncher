@@ -44,7 +44,7 @@ public class Relauncher implements IFMLLoadingPlugin {
             if (entry.startsWith("org.prismlauncher") || entry.startsWith("org.multimc") || entry.startsWith("org.polymc")) {
                 MMCInstaller.showGUI();
             } else {
-                if (!Config.booted) {
+                if (Config.showConfigGUI) {
                     Initializer.InitJavaAndArg();
                 }
                 Initializer.hideWindow();
@@ -52,7 +52,7 @@ public class Relauncher implements IFMLLoadingPlugin {
                 ProcessBuilder relaunch = new ProcessBuilder(args);
                 try {
                     Process p = relaunch.directory(Launch.minecraftHome).inheritIO().start();
-                    Config.booted = true;
+                    Config.showConfigGUI = false;
                     Config.save();
                     Runtime.getRuntime().addShutdownHook(new Thread(p::destroy));
                     BufferedReader inputReader = new BufferedReader(new InputStreamReader(p.getInputStream()));
