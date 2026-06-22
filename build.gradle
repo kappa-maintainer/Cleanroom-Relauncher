@@ -22,13 +22,14 @@ assertSubProperties 'use_asset_mover', 'asset_mover_version'
 setDefaultProperty 'generate_sources_jar', true, false
 setDefaultProperty 'generate_javadocs_jar', true, false
 setDefaultProperty 'minecraft_username', true, 'Developer'
+
 setDefaultProperty 'extra_jvm_args', false, ''
 
 version = propertyString('mod_version')
 group = propertyString('root_package')
 
 base {
-    archivesName.set("++"+ propertyString('mod_id'))
+    archivesName.set("++${propertyString('mod_id')}")
 }
 
 
@@ -43,6 +44,8 @@ java {
         withJavadocJar()
     }
 }
+
+def remapTaskName = propertyBool('enable_shadow') ? "remapShadowJar" : "remapJar"
 
 configurations {
     embed
@@ -79,26 +82,12 @@ unimined.minecraft {
 
     defaultRemapJar = false
 
-    if (propertyBool('enable_shadow')) {
-        remap(tasks.shadowJar) {
-            mixinRemap {
-                enableBaseMixin()
-                enableMixinExtra()
-                disableRefmap()
-            }
-        }
-    } else {
-        remap(tasks.jar) {
-            mixinRemap {
-                enableBaseMixin()
-                enableMixinExtra()
-                disableRefmap()
-            }
-        }
-    }
+    String jarTaskName = propertyBool('enable_shadow') ? "shadowJar" : "jar"
+    remap(tasks.named(jarTaskName).get())
 
     mods {
         remap(configurations.modCompileOnly)
+        remap(configurations.modRuntimeOnly)
     }
 }
 
@@ -156,6 +145,7 @@ if (!propertyBool('enable_shadow')) {
 }
 
 jar {
+    archiveClassifier = 'dev'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     if (configurations.contain.size() > 0) {
         into('/') {
@@ -177,11 +167,7 @@ jar {
             attributes(attribute_map)
         }
     }
-    if (propertyBool('enable_shadow')) {
-        finalizedBy(tasks.named("remapShadowJar"))
-    } else {
-        finalizedBy(tasks.named("remapJar"))
-    }
+    finalizedBy(tasks.named(remapTaskName).get())
 }
 
 
@@ -190,7 +176,8 @@ shadowJar {
     archiveClassifier = "shadow"
 }
 
-remapShadowJar {
+tasks.named(remapTaskName).configure {
+    archiveClassifier = 'shadow'
     doFirst {
         logging.captureStandardOutput LogLevel.INFO
     }

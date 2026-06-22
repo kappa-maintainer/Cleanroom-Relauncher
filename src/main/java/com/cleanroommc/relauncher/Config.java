@@ -20,6 +20,7 @@ public class Config {
     public static boolean showConfigGUI;
     public static boolean alwaysShowConfigGUI;
     public static String classPath;
+    public static boolean disableUpdateToast;
 
 
 
@@ -45,6 +46,7 @@ public class Config {
         chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, false, Messages.get("config.chinese_mode"));
         alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, false, Messages.get("config.always_show_config"));
         classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, "", Messages.get("config.class_path"));
+        disableUpdateToast = forgeConfig.getBoolean(Messages.get("config.name.disable_update_toast"), categoryGeneral, false, Messages.get("config.disable_update_toast"));
         
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();
@@ -67,6 +69,7 @@ public class Config {
         chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, chineseMode, Messages.get("config.chinese_mode"));
         alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, alwaysShowConfigGUI, Messages.get("config.always_show_config"));
         classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, classPath, Messages.get("config.class_path"));
+        disableUpdateToast = forgeConfig.getBoolean(Messages.get("config.name.disable_update_toast"), categoryGeneral, disableUpdateToast, Messages.get("config.disable_update_toast"));
 
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();
