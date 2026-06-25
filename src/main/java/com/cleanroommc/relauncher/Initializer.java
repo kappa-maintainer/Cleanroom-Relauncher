@@ -49,7 +49,6 @@ import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.util.List;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class Initializer {
@@ -75,7 +74,7 @@ public class Initializer {
     
     public static void InitJavaAndArg() {
         Config.syncConfig();
-        if (JavaDetector.getInstalledJVMs().isEmpty()) {
+        if (JavaDetector.getInstalledJVMs().isEmpty() || java25NotExist()) {
             checkJavaAndWarn();
         }
         mainFrame.setLayout(new MigLayout("", "[][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow][grow][grow][grow][grow]"));
@@ -754,6 +753,13 @@ public class Initializer {
         advSetting.requestFocus();
     }
     
+    private static boolean java25NotExist() {
+        for (JVMInfo info : JavaDetector.getInstalledJVMs()) {
+            if (info.getSpecification() >= 25) return false;
+        }
+        return true;
+    }
+
     private static void checkJavaAndWarn() {
         JDialog warning = new JDialog();
         warning.setLayout(new MigLayout());
@@ -775,38 +781,57 @@ public class Initializer {
         GUIUtils.enlargeFont(newJava2);
         LinkButton java21button = new LinkButton("https://adoptium.net/temurin/releases?version=21&os=any&arch=any");
         GUIUtils.enlargeFont(java21button);
+        boolean needJava25 = java25NotExist();
+        JLabel java25Label = null;
+        JLabel java25Label2 = null;
+        LinkButton java25button = null;
+        if (needJava25) {
+            java25Label = new JLabel(Messages.get("warning.need_java25"));
+            java25Label.setHorizontalAlignment(JLabel.CENTER);
+            GUIUtils.enlargeFont(java25Label);
+            java25Label2 = new JLabel(Messages.get("warning.download_java25"));
+            java25Label2.setHorizontalAlignment(JLabel.CENTER);
+            GUIUtils.enlargeFont(java25Label2);
+            java25button = new LinkButton("https://adoptium.net/temurin/releases?version=25&os=any&arch=any");
+            GUIUtils.enlargeFont(java25button);
+        }
         JButton confirm = new JButton(Messages.get("button.continue"));
         GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
         JButton quit = new JButton(Messages.get("button.quit"));
         GUIUtils.enlargeFont(quit);
-        
-        warning.add(icon, "cell 0 0 2 1, grow");
-        
+
+        int row = 0;
+        warning.add(icon, "cell 0 " + row + " 2 1, grow");
+        row++;
+
         if (JVMInfo.getCurrentUpdateNumber() < 341 && JVMInfo.getCurrentUpdateNumber() > 0) {
-            warning.add(oldJava, "cell 0 1, grow");
-            warning.add(oldJava2, "cell 0 2, grow");
-            warning.add(java8button, "cell 1 2, grow");
-            
-            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 3 2 1, grow");
-            
-            warning.add(newJava, "cell 0 4, grow");
-            warning.add(newJava2, "cell 0 5, grow");
-            warning.add(java21button, "cell 1 5, grow");
-
-            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 6 2 1, grow");
-            
-            warning.add(confirm, "cell 0 7, grow");
-            warning.add(quit, "cell 1 7, grow");
-        } else {
-            warning.add(newJava, "cell 0 1, grow");
-            warning.add(newJava2, "cell 0 2, grow");
-            warning.add(java21button, "cell 1 2, grow");
-
-            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 3 2 1, grow");
-            warning.add(confirm, "cell 0 4, grow");
-            warning.add(quit, "cell 1 4, grow");
+            warning.add(oldJava, "cell 0 " + row + ", grow");
+            warning.add(oldJava2, "cell 0 " + (row + 1) + ", grow");
+            warning.add(java8button, "cell 1 " + (row + 1) + ", grow");
+            row += 2;
+            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 " + row + " 2 1, grow");
+            row++;
         }
-        
+
+        warning.add(newJava, "cell 0 " + row + ", grow");
+        warning.add(newJava2, "cell 0 " + (row + 1) + ", grow");
+        warning.add(java21button, "cell 1 " + (row + 1) + ", grow");
+        row += 2;
+
+        if (needJava25) {
+            warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 " + row + " 2 1, grow");
+            row++;
+            warning.add(java25Label, "cell 0 " + row + ", grow");
+            warning.add(java25Label2, "cell 0 " + (row + 1) + ", grow");
+            warning.add(java25button, "cell 1 " + (row + 1) + ", grow");
+            row += 2;
+        }
+
+        warning.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 " + row + " 2 1, grow");
+        row++;
+        warning.add(confirm, "cell 0 " + row + ", grow");
+        warning.add(quit, "cell 1 " + row + ", grow");
+
         quit.addActionListener(actionEvent -> ExitWrapper.exit(0));
         
         confirm.addActionListener(actionEvent -> {
