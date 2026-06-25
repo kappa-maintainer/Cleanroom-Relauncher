@@ -42,12 +42,15 @@ public class CleanroomUpdateNotifier {
     }
 
     private static boolean checkAndShow() {
+        if (shown.get()) return true;
+
         ModContainer cleanroom = Loader.instance().getIndexedModList().get("cleanroom");
         if (cleanroom == null) return true;
 
         ForgeVersion.CheckResult result = ForgeVersion.getResult(cleanroom);
         if (result.status == Status.PENDING) return false;
 
+        if (!shown.compareAndSet(false, true)) return true;
         if (result.status == Status.OUTDATED || result.status == Status.BETA_OUTDATED) {
             Minecraft.getMinecraft().addScheduledTask(() ->
                 Minecraft.getMinecraft().getToastGui().add(new SystemToast(
@@ -57,7 +60,6 @@ public class CleanroomUpdateNotifier {
                 ))
             );
         }
-        shown.set(true);
         return true;
     }
 }

@@ -17,6 +17,7 @@ public class Config {
     public static int maxRetry;
     public static int maxDownloadSession;
     public static boolean chineseMode;
+    public static String localPackPath;
     public static boolean showConfigGUI;
     public static boolean alwaysShowConfigGUI;
     public static String classPath;
@@ -45,6 +46,7 @@ public class Config {
         maxDownloadSession = forgeConfig.getInt(Messages.get("config.name.max_download_session"), categoryGeneral, 5, 1, 65535, Messages.get("config.max_download_session"));
         chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, false, Messages.get("config.chinese_mode"));
         alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, false, Messages.get("config.always_show_config"));
+        localPackPath = forgeConfig.getString(Messages.get("config.name.local_pack_path"), categoryGeneral, "", Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, "", Messages.get("config.class_path"));
         disableUpdateToast = forgeConfig.getBoolean(Messages.get("config.name.disable_update_toast"), categoryGeneral, false, Messages.get("config.disable_update_toast"));
         
@@ -68,6 +70,7 @@ public class Config {
         maxDownloadSession = forgeConfig.getInt(Messages.get("config.name.max_download_session"), categoryGeneral, maxDownloadSession, 1, 65535, Messages.get("config.max_download_session"));
         chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, chineseMode, Messages.get("config.chinese_mode"));
         alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, alwaysShowConfigGUI, Messages.get("config.always_show_config"));
+        localPackPath = forgeConfig.getString(Messages.get("config.name.local_pack_path"), categoryGeneral, localPackPath, Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, classPath, Messages.get("config.class_path"));
         disableUpdateToast = forgeConfig.getBoolean(Messages.get("config.name.disable_update_toast"), categoryGeneral, disableUpdateToast, Messages.get("config.disable_update_toast"));
 

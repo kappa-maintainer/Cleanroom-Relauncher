@@ -4,12 +4,10 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import io.netty.util.internal.StringUtil;
 import net.minecraftforge.fml.common.versioning.ComparableVersion;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,11 +17,8 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.Optional;
-import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -31,7 +26,7 @@ public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
         File libraries = new File(mmcDir, "libraries");
-        File universalJar = new File(libraries, "cleanroom-0.5.14-alpha-universal.jar");
+        File universalJar = new File(libraries, "cleanroom-" + CleanroomVersionParser.BUNDLED_VERSION + "-universal.jar");
         mmcDir.mkdir();
         File pack = new File(mmcDir, "mmcpack.zip");
         if (!Config.useLocalPack) {
@@ -39,13 +34,10 @@ public class MMCPackDownloader {
             universalJar = new File(libraries, "cleanroom-" + version + "-universal.jar");
             boolean needDownload = true;
             if (pack.exists()) {
-                File mmcPackJson = new File(mmcDir, "mmc-pack.json");
-                if (mmcPackJson.exists()) {
-                    String cachedVersion = readVersionFromMMCPackJson(mmcPackJson);
-                    if (cachedVersion != null && !isVersionNewer(version, cachedVersion)) {
-                        Relauncher.LOGGER.info("Cached mmc pack version {} is up-to-date, skipping download", cachedVersion);
-                        needDownload = false;
-                    }
+                String cachedVersion = CleanroomVersionParser.readCachedVersion();
+                if (cachedVersion != null && !isVersionNewer(version, cachedVersion)) {
+                    Relauncher.LOGGER.info("Cached mmc pack version {} is up-to-date, skipping download", cachedVersion);
+                    needDownload = false;
                 }
             }
             if (needDownload) {
@@ -55,14 +47,17 @@ public class MMCPackDownloader {
                 Downloader.downloadAll(list);
             }
         } else {
-            if (Relauncher.workingDir.listFiles() != null) {
-                Optional<File> packfile = Arrays.stream(Relauncher.workingDir.listFiles()).filter(file -> file.getName().startsWith("Cleanroom-MMC-instance-") && file.getName().endsWith(".zip")).findFirst();
-                if (packfile.isPresent()) {
-                    Relauncher.LOGGER.info("Found local pack {}", packfile.get());
-                    Files.copy(packfile.get().toPath(), pack.toPath());
+            if (!Config.localPackPath.isEmpty()) {
+                File localPack = new File(Config.localPackPath);
+                if (localPack.exists() && localPack.isFile()) {
+                    Relauncher.LOGGER.info("Using local pack {}", localPack.getAbsolutePath());
+                    Files.copy(localPack.toPath(), pack.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 } else {
+                    Relauncher.LOGGER.warn("Local pack not found at {}, falling back to bundled", Config.localPackPath);
                     extractBundledZip(pack);
                 }
+            } else if (pack.exists()) {
+                Relauncher.LOGGER.info("Using cached mmc pack");
             } else {
                 extractBundledZip(pack);
             }
@@ -107,22 +102,6 @@ public class MMCPackDownloader {
 
     }
     
-    private static String readVersionFromMMCPackJson(File jsonFile) {
-        try (FileInputStream fis = new FileInputStream(jsonFile)) {
-            JsonObject root = new JsonParser().parse(IOUtils.toString(fis, StandardCharsets.UTF_8)).getAsJsonObject();
-            JsonArray components = root.getAsJsonArray("components");
-            for (JsonElement element : components) {
-                JsonObject comp = element.getAsJsonObject();
-                if ("net.minecraftforge".equals(comp.get("uid").getAsString())) {
-                    return comp.get("version").getAsString();
-                }
-            }
-        } catch (Exception e) {
-            Relauncher.LOGGER.error("Failed to read version from mmc-pack.json", e);
-        }
-        return null;
-    }
-
     private static boolean isVersionNewer(String latest, String cached) {
         return new ComparableVersion(latest).compareTo(new ComparableVersion(cached)) > 0;
     }

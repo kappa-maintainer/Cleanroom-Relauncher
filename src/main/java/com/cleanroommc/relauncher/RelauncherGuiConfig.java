@@ -26,4 +26,12 @@ public class RelauncherGuiConfig extends GuiConfig {
     private static List<IConfigElement> getConfigElements() {
         return new ArrayList<>(new ConfigElement(Config.getForgeConfig().getCategory("General")).getChildElements());
     }
+
+    @Override
+    public void onGuiClosed() {
+        if (Config.getForgeConfig().hasChanged()) {
+            Config.getForgeConfig().save();
+        }
+        super.onGuiClosed();
+    }
 }

@@ -43,6 +43,14 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import javax.swing.Timer;
+import javax.swing.JOptionPane;
+import javax.swing.TransferHandler;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 public class Initializer {
     private static final String valid = "✔";
@@ -57,13 +65,20 @@ public class Initializer {
     private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
     private static Runnable verifyJVM;
+    private static JCheckBox useLocalPackCheckbox;
+    private static JTextField localPackPathField;
+    private static JButton localPackBrowserButton;
+    private static JLabel latestVersionLabel;
+    private static JLabel localVersionLabel;
+    private static String latestVersionFetched = null;
+    private static boolean latestVersionFetchFailed = false;
     
     public static void InitJavaAndArg() {
         Config.syncConfig();
         if (JavaDetector.getInstalledJVMs().isEmpty()) {
             checkJavaAndWarn();
         }
-        mainFrame.setLayout(new MigLayout("", "[][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow]"));
+        mainFrame.setLayout(new MigLayout("", "[][grow][grow][grow]", "[grow][grow][grow][grow][grow][grow][grow][grow][grow][grow][grow]"));
 
         JLabel pathLabel = new JLabel(Messages.get("label.java_path"));
         JTextField pathText = new JTextField();
@@ -88,9 +103,12 @@ public class Initializer {
             args.setEnabled(value);
             argsScroll.setEnabled(value);
             advSetting.setEnabled(value);
+            useLocalPackCheckbox.setEnabled(value);
+            localPackPathField.setEnabled(value && Config.useLocalPack);
+            localPackBrowserButton.setEnabled(value && Config.useLocalPack);
         };
 
-        launchButton = new JButton(Messages.get("button.launch"));
+        launchButton = new JButton(Messages.get("button.launch_latest"));
         launchButton.setEnabled(false);
         // java related
         mainFrame.add(pathLabel, "cell 0 0, grow");
@@ -122,16 +140,49 @@ public class Initializer {
         GUIUtils.enlargeFont(advSetting);
 
         mainFrame.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 5 4 1, grow");
+
+        useLocalPackCheckbox = new JCheckBox(Messages.get("checkbox.use_local_pack"));
+        useLocalPackCheckbox.setSelected(Config.useLocalPack);
+        useLocalPackCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack"));
+        GUIUtils.enlargeFont(useLocalPackCheckbox);
+
+        localPackPathField = new JTextField(20);
+        localPackPathField.setText(Config.localPackPath);
+        localPackPathField.setToolTipText(Messages.get("tooltip.local_pack_path"));
+        localPackPathField.setMinimumSize(new Dimension(300, 10));
+        localPackPathField.setEnabled(Config.useLocalPack);
+        GUIUtils.enlargeFont(localPackPathField);
+
+        localPackBrowserButton = new JButton(Messages.get("button.browser"));
+        localPackBrowserButton.setEnabled(Config.useLocalPack);
+        GUIUtils.enlargeFont(localPackBrowserButton);
+
+        mainFrame.add(useLocalPackCheckbox, "cell 0 6, grow");
+        mainFrame.add(localPackPathField, "cell 1 6 2 1, grow");
+        mainFrame.add(localPackBrowserButton, "cell 3 6, grow");
+
+        latestVersionLabel = new JLabel(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
+        latestVersionLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(latestVersionLabel);
+
+        localVersionLabel = new JLabel(Messages.get("label.local_version") + ": ");
+        localVersionLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(localVersionLabel);
+
+        mainFrame.add(latestVersionLabel, "cell 0 7 2 1, grow");
+        mainFrame.add(localVersionLabel, "cell 2 7 2 1, grow");
+
+        mainFrame.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 8 4 1, grow");
         
-        mainFrame.add(mainStatusLabel, "cell 0 6 4 1, grow");
+        mainFrame.add(mainStatusLabel, "cell 0 9 4 1, grow");
         mainStatusLabel.setMinimumSize(new Dimension(300, 10));
         mainStatusLabel.setHorizontalAlignment(JLabel.CENTER);
         GUIUtils.enlargeFont(mainStatusLabel);
-        mainFrame.add(mainProgressbar, "cell 0 7 4 1, grow");
+        mainFrame.add(mainProgressbar, "cell 0 10 4 1, grow");
         mainProgressbar.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(mainProgressbar);
         
-        mainFrame.add(launchButton, "cell 0 8 4 1, grow");
+        mainFrame.add(launchButton, "cell 0 11 4 1, grow");
         launchButton.setMinimumSize(new Dimension(300, 10));
         GUIUtils.enlargeFont(launchButton, Font.BOLD, 20);
 
@@ -273,6 +324,79 @@ public class Initializer {
 
         argsLabel.setHorizontalAlignment(JLabel.CENTER);
 
+        useLocalPackCheckbox.addItemListener(e -> {
+            boolean selected = useLocalPackCheckbox.isSelected();
+            Config.useLocalPack = selected;
+            localPackPathField.setEnabled(selected);
+            localPackBrowserButton.setEnabled(selected);
+            updateLaunchButtonText();
+            updateVersionStatusBar();
+        });
+
+        localPackPathField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent documentEvent) {
+                onChange();
+            }
+            @Override
+            public void removeUpdate(DocumentEvent documentEvent) {
+                onChange();
+            }
+            @Override
+            public void changedUpdate(DocumentEvent documentEvent) {
+                onChange();
+            }
+            private void onChange() {
+                String path = localPackPathField.getText();
+                Config.localPackPath = path;
+                localPackPathField.setToolTipText(path);
+                if (!path.isEmpty()) {
+                    File f = new File(path);
+                    if (f.exists() && f.isFile() && validateMMCPack(f)) {
+                        updateLaunchButtonText();
+                        updateVersionStatusBar();
+                    }
+                } else {
+                    updateLaunchButtonText();
+                    updateVersionStatusBar();
+                }
+            }
+        });
+
+        JFileChooser mmcPackPicker = new JFileChooser(SystemUtils.getUserDir());
+        mmcPackPicker.setMultiSelectionEnabled(false);
+        mmcPackPicker.setAcceptAllFileFilterUsed(false);
+        mmcPackPicker.setFileHidingEnabled(false);
+        mmcPackPicker.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        mmcPackPicker.addChoosableFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return file.getName().endsWith(".zip") || file.isDirectory();
+            }
+            @Override
+            public String getDescription() {
+                return Messages.get("filter.mmc_zip");
+            }
+        });
+
+        localPackBrowserButton.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(localPackBrowserButton)) {
+                GUIUtils.setCentral(mmcPackPicker);
+                int r = mmcPackPicker.showOpenDialog(mainFrame);
+                if (r == JFileChooser.APPROVE_OPTION) {
+                    File selected = mmcPackPicker.getSelectedFile();
+                    if (validateMMCPack(selected)) {
+                        localPackPathField.setText(selected.getAbsolutePath());
+                    } else {
+                        JOptionPane.showMessageDialog(mainFrame,
+                                Messages.get("warning.invalid_mmc_pack"),
+                                Messages.get("warning.invalid_mmc_pack_title"),
+                                JOptionPane.WARNING_MESSAGE);
+                    }
+                }
+            }
+        });
+
         mainProgressbar.setIndeterminate(true);
         mainProgressbar.addChangeListener(changeEvent -> updateStatusLabel());
         mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
@@ -286,6 +410,61 @@ public class Initializer {
             }
         });
         cycleTimer.start();
+
+        updateVersionStatusBar();
+        updateLaunchButtonText();
+
+        TransferHandler mmcDropHandler = new TransferHandler() {
+            @Override
+            public boolean canImport(TransferSupport support) {
+                return support.isDataFlavorSupported(DataFlavor.javaFileListFlavor);
+            }
+            @Override
+            @SuppressWarnings("unchecked")
+            public boolean importData(TransferSupport support) {
+                try {
+                    Transferable transferable = support.getTransferable();
+                    List<File> files = (List<File>) transferable.getTransferData(DataFlavor.javaFileListFlavor);
+                    if (files.size() == 1) {
+                        File file = files.get(0);
+                        if (file.getName().endsWith(".zip") && validateMMCPack(file)) {
+                            localPackPathField.setText(file.getAbsolutePath());
+                            if (!useLocalPackCheckbox.isSelected()) {
+                                useLocalPackCheckbox.setSelected(true);
+                            }
+                            return true;
+                        } else if (file.getName().endsWith(".zip")) {
+                            JOptionPane.showMessageDialog(mainFrame,
+                                    Messages.get("warning.invalid_mmc_pack"),
+                                    Messages.get("warning.invalid_mmc_pack_title"),
+                                    JOptionPane.WARNING_MESSAGE);
+                        }
+                    }
+                } catch (UnsupportedFlavorException | IOException e) {
+                    Relauncher.LOGGER.warn("Failed to handle dropped file", e);
+                }
+                return false;
+            }
+        };
+        mainFrame.setTransferHandler(mmcDropHandler);
+        localPackPathField.setTransferHandler(mmcDropHandler);
+
+        new Thread(() -> {
+            try {
+                String ver = CleanroomVersionParser.getVersion();
+                latestVersionFetched = ver;
+                SwingUtilities.invokeLater(() -> {
+                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + ver);
+                    updateLaunchButtonText();
+                });
+            } catch (Exception e) {
+                latestVersionFetchFailed = true;
+                SwingUtilities.invokeLater(() -> {
+                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.version_fetch_failed"));
+                    updateLaunchButtonText();
+                });
+            }
+        }, "Version Fetch Thread").start();
 
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
@@ -367,7 +546,7 @@ public class Initializer {
         detector.setLayout(new MigLayout(
                 "",
                 "[grow][grow]",
-                "[grow][grow][grow]"
+                "[grow][grow][grow][grow]"
         ));
         DefaultListModel<JVMInfo> model = new DefaultListModel<>();
         JList<JVMInfo> list = new JList<>(model);
@@ -376,13 +555,19 @@ public class Initializer {
         JButton confirm = new JButton(Messages.get("button.confirm"));
         JButton cancel = new JButton(Messages.get("button.cancel"));
         
+        JLabel warningLabel = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
+        warningLabel.setText(Messages.get("warning.need_java25"));
+        warningLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(warningLabel);
+
         detector.add(list, "cell 0 0 2 2, grow");
         GUIUtils.enlargeFont(list);
-        detector.add(info, "cell 0 2 2 1, grow");
+        detector.add(warningLabel, "cell 0 2 2 1, grow");
+        detector.add(info, "cell 0 3 2 1, grow");
         GUIUtils.enlargeFont(info);
-        detector.add(cancel, "cell 0 3, grow");
+        detector.add(cancel, "cell 0 4, grow");
         GUIUtils.enlargeFont(cancel);
-        detector.add(confirm, "cell 1 3, grow");
+        detector.add(confirm, "cell 1 4, grow");
         GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
 
         list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -462,8 +647,6 @@ public class Initializer {
         JTextField proxyAddrTextField = new JTextField();
         proxyAddrTextField.setText(Config.proxyAddr);
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
-        JCheckBox useLocalCheckbox = new JCheckBox(Messages.get("checkbox.use_local_pack"));
-        useLocalCheckbox.setSelected(Config.useLocalPack);
         JCheckBox chineseModeCheckbox = new JCheckBox(Messages.get("checkbox.chinese_mirror"));
         chineseModeCheckbox.setSelected(Config.chineseMode);
         JCheckBox alwaysShowConfigCheckbox = new JCheckBox(Messages.get("checkbox.always_show_config"));
@@ -490,8 +673,6 @@ public class Initializer {
 
         advSetting.add(chineseModeCheckbox, "cell 0 3 1 1, grow");
         GUIUtils.enlargeFont(chineseModeCheckbox);
-        advSetting.add(useLocalCheckbox, "cell 1 3 1 1, grow");
-        GUIUtils.enlargeFont(useLocalCheckbox);
         advSetting.add(alwaysShowConfigCheckbox, "cell 2 3 2 1, grow");
         GUIUtils.enlargeFont(alwaysShowConfigCheckbox);
         
@@ -536,8 +717,6 @@ public class Initializer {
         });
         
 
-        useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack"));
-
         proxyAddrTextField.setToolTipText(Messages.get("tooltip.proxy_addr"));
         
         portSpinner.setToolTipText(Messages.get("tooltip.proxy_port"));
@@ -556,7 +735,6 @@ public class Initializer {
                 advSetting.setVisible(false);
                 setGUIInteractable(true);
                 Config.chineseMode = chineseModeCheckbox.isSelected();
-                Config.useLocalPack = useLocalCheckbox.isSelected();
                 Config.proxyPort = (int) portSpinner.getValue();
                 Config.proxyAddr = proxyAddrTextField.getText();
                 Config.maxDownloadSession = (int) maxSessionSpinner.getValue();
@@ -678,6 +856,50 @@ public class Initializer {
         }
     }
     
+    private static boolean validateMMCPack(File file) {
+        if (!file.exists() || !file.isFile() || !file.getName().endsWith(".zip")) return false;
+        try (ZipFile zip = new ZipFile(file)) {
+            return zip.getEntry("mmc-pack.json") != null;
+        } catch (IOException e) {
+            Relauncher.LOGGER.warn("Failed to validate MMC pack {}", file, e);
+            return false;
+        }
+    }
+
+    private static void updateLaunchButtonText() {
+        if (Config.useLocalPack) {
+            if (!Config.localPackPath.isEmpty()) {
+                String ver = CleanroomVersionParser.readVersionFromLocalMMCPack(Config.localPackPath);
+                launchButton.setText(Messages.get("button.launch", ver != null ? ver : "?"));
+            } else {
+                String cached = CleanroomVersionParser.readCachedVersion();
+                launchButton.setText(Messages.get("button.launch", cached != null ? cached : CleanroomVersionParser.BUNDLED_VERSION));
+            }
+        } else if (latestVersionFetched != null) {
+            launchButton.setText(Messages.get("button.launch", latestVersionFetched));
+        } else if (latestVersionFetchFailed) {
+            launchButton.setText(Messages.get("button.launch", CleanroomVersionParser.BUNDLED_VERSION));
+        } else {
+            launchButton.setText(Messages.get("button.launch_latest"));
+        }
+    }
+
+    private static void updateVersionStatusBar() {
+        if (Config.useLocalPack && !Config.localPackPath.isEmpty()) {
+            String localVer = CleanroomVersionParser.readVersionFromLocalMMCPack(Config.localPackPath);
+            String cached = CleanroomVersionParser.readCachedVersion();
+            String localDisplay = localVer != null ? localVer : "?";
+            if (cached != null && !cached.equals(localVer)) {
+                localVersionLabel.setText(Messages.get("label.local_version") + ": " + cached + " -> " + localDisplay);
+            } else {
+                localVersionLabel.setText(Messages.get("label.local_version") + ": " + localDisplay);
+            }
+        } else {
+            String cached = CleanroomVersionParser.readCachedVersion();
+            localVersionLabel.setText(Messages.get("label.local_version") + ": " + (cached != null ? cached : CleanroomVersionParser.BUNDLED_VERSION));
+        }
+    }
+
     private static class LinkButton extends JButton{
         public LinkButton(String link) {
             super();
