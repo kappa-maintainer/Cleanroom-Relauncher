@@ -26,8 +26,10 @@ import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -35,8 +37,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class Downloader {
     private static final PoolingHttpClientConnectionManager connManager;
-    private static final HttpClientBuilder builder;
+    static final HttpClientBuilder builder;
     private static final PriorityQueue<DownloadEntry> queue = new PriorityQueue<>();
+    private static final ConcurrentLinkedQueue<Throwable> threadErrors = new ConcurrentLinkedQueue<>();
 
     static {
 
@@ -85,6 +88,7 @@ public class Downloader {
     public static void downloadAll(List<DownloadEntry> list) {
         Initializer.getMainProgressbar().setMaximum(list.size());
         Initializer.setCurrentFile(null);
+        threadErrors.clear();
         try (CloseableHttpClient client = builder.build()) {
             while (!list.isEmpty() || !queue.isEmpty()) {
                 while (!queue.isEmpty()) {
@@ -109,6 +113,13 @@ public class Downloader {
         } catch (IOException | InterruptedException e) {
             Relauncher.LOGGER.error(e);
         }
+        if (!threadErrors.isEmpty()) {
+            Throwable t = threadErrors.poll();
+            if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            }
+            throw new RuntimeException(t);
+        }
     }
 
 
@@ -128,6 +139,19 @@ public class Downloader {
         }
     }
 
+    static String downloadString(String url) throws IOException {
+        try (CloseableHttpClient client = builder.build()) {
+            HttpGet httpGet = new HttpGet(url);
+            return client.execute(httpGet, response -> {
+                int statusCode = response.getCode();
+                if (statusCode != 200) {
+                    throw new IOException("Unexpected HTTP status: " + statusCode + " for " + url);
+                }
+                return IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8).trim();
+            });
+        }
+    }
+
     private static class DownloadThread extends Thread {
         private final CloseableHttpClient httpClient;
         private final HttpGet httpget;
@@ -142,6 +166,7 @@ public class Downloader {
 
         @Override
         public void run() {
+            try {
             Relauncher.LOGGER.info("Checking {}...", entry.getDestination().getName());
             if (entry.getDestination().exists()) {
                 if (calculateSHA1(entry.getDestination(), entry.getSha1())) {
@@ -161,6 +186,10 @@ public class Downloader {
                 //Executing the request
                 Initializer.setCurrentFile(entry.getDestination().getName());
                 ClassicHttpResponse httpresponse = httpClient.execute(httpget, response -> {
+                    int statusCode = response.getCode();
+                    if (statusCode != 200) {
+                        throw new IOException("Unexpected HTTP status: " + statusCode + " for " + entry.getUrl());
+                    }
                     try (FileOutputStream outputStream = new FileOutputStream(entry.getDestination())) {
                         IOUtils.copy(response.getEntity().getContent(), outputStream);
                     }
@@ -173,6 +202,7 @@ public class Downloader {
                             Relauncher.LOGGER.error("Download {} reached max attempts", entry.getDestination().getName());
                             throw new RuntimeException("Max retry reached");
                         } else {
+                            Initializer.setStatusText(Messages.get("status.retrying_download", entry.getDestination().getName(), entry.getAttempts(), Config.maxRetry));
                             queue.add(entry);
                             Relauncher.LOGGER.info("Adding {} back to queue", entry.getDestination().getName());
                         }
@@ -187,9 +217,14 @@ public class Downloader {
                     Relauncher.LOGGER.error("Download {} reached max attempts, caused by {}.", entry.getDestination().getName(), e);
                     throw new RuntimeException("Max retry reached");
                 } else {
+                    Initializer.setStatusText(Messages.get("status.retrying_download", entry.getDestination().getName(), entry.getAttempts(), Config.maxRetry));
                     queue.add(entry);
                     Relauncher.LOGGER.info("Retrying on {}", entry.getDestination().getName());
                 }
+            }
+            } catch (RuntimeException e) {
+                Relauncher.LOGGER.error("Fatal error in download thread: {}", e.getMessage());
+                threadErrors.add(e);
             }
         }
     }

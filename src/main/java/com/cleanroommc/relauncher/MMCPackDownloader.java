@@ -42,9 +42,20 @@ public class MMCPackDownloader {
             }
             if (needDownload) {
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
+                Initializer.setStatusText(Messages.get("status.downloading_mmc_pack", version));
+                String zipUrl = "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + ".zip";
+                String sha1 = fetchSha1(zipUrl + ".sha1");
                 List<DownloadEntry> list = new ArrayList<>(1);
-                list.add(new DownloadEntry(new URL("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + ".zip"), pack, ""));
-                Downloader.downloadAll(list);
+                list.add(new DownloadEntry(new URL(zipUrl), pack, sha1));
+                try {
+                    Downloader.downloadAll(list);
+                } catch (RuntimeException e) {
+                    Relauncher.LOGGER.error("MMC pack download failed: {}", e.getMessage());
+                    throw new IOException(Messages.get("status.mmc_download_failed", Config.maxRetry), e);
+                }
+                if (!pack.exists() || pack.length() == 0) {
+                    throw new IOException(Messages.get("status.mmc_download_failed", Config.maxRetry));
+                }
             }
         } else {
             if (!Config.localPackPath.isEmpty()) {
@@ -94,6 +105,10 @@ public class MMCPackDownloader {
                     }
                 }
             }
+        } catch (IOException e) {
+            Relauncher.LOGGER.error("Failed to extract MMC pack, removing corrupted file");
+            pack.delete();
+            throw e;
         }
         if (universalJar.exists()) {
             File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
@@ -119,5 +134,18 @@ public class MMCPackDownloader {
             Relauncher.LOGGER.error(e.getMessage());
             throw new RuntimeException(e);
         }
+    }
+
+    private static String fetchSha1(String sha1Url) {
+        try {
+            String content = Downloader.downloadString(sha1Url);
+            if (!content.isEmpty()) {
+                Relauncher.LOGGER.info("Fetched SHA1 hash for MMC pack: {}", content);
+                return content;
+            }
+        } catch (IOException e) {
+            Relauncher.LOGGER.warn("Failed to fetch SHA1 hash from {}, proceeding without integrity check", sha1Url);
+        }
+        return "";
     }
 }

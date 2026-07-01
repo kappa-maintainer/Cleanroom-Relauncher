@@ -518,10 +518,6 @@ public class Initializer {
         return new JVMInfo(path).getSpecification() > 20;
     }
 
-    public static JLabel getMainStatusLabel() {
-        return mainStatusLabel;
-    }
-
     public static JProgressBar getMainProgressbar() {
         return mainProgressbar;
     }
@@ -860,7 +856,7 @@ public class Initializer {
     
     public synchronized static void addProgress(String fileName) {
         activeDownloads.remove(fileName);
-        mainProgressbar.setValue(mainProgressbar.getValue() + 1);
+        SwingUtilities.invokeLater(() -> mainProgressbar.setValue(mainProgressbar.getValue() + 1));
     }
 
     public static void setCurrentFile(String name) {
@@ -869,7 +865,11 @@ public class Initializer {
         } else {
             activeDownloads.add(name);
         }
-        updateStatusLabel();
+        SwingUtilities.invokeLater(Initializer::updateStatusLabel);
+    }
+
+    public static void setStatusText(String text) {
+        SwingUtilities.invokeLater(() -> mainStatusLabel.setText(text));
     }
 
     private static void updateStatusLabel() {

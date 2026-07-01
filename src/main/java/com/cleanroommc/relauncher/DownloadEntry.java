@@ -64,4 +64,8 @@ public class DownloadEntry {
     public int failed() {
         return attempts.addAndGet(1);
     }
+
+    public int getAttempts() {
+        return attempts.get();
+    }
 }
