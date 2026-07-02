@@ -16,7 +16,7 @@ public class Config {
     public static String libraryPath;
     public static int maxRetry;
     public static int maxDownloadSession;
-    public static boolean chineseMode;
+    public static boolean useMirror;
     public static String localPackPath;
     public static boolean showConfigGUI;
     public static boolean alwaysShowConfigGUI;
@@ -44,7 +44,7 @@ public class Config {
         libraryPath = forgeConfig.getString(Messages.get("config.name.library_path"), categoryGeneral, "", Messages.get("config.library_path"));
         maxRetry = forgeConfig.getInt(Messages.get("config.name.max_retry"), categoryGeneral, 5, 1, 65535, Messages.get("config.max_retry"));
         maxDownloadSession = forgeConfig.getInt(Messages.get("config.name.max_download_session"), categoryGeneral, 5, 1, 65535, Messages.get("config.max_download_session"));
-        chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, false, Messages.get("config.chinese_mode"));
+        useMirror = forgeConfig.getBoolean(Messages.get("config.name.use_mirror"), categoryGeneral, false, Messages.get("config.use_mirror"));
         alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, false, Messages.get("config.always_show_config"));
         localPackPath = forgeConfig.getString(Messages.get("config.name.local_pack_path"), categoryGeneral, "", Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, "", Messages.get("config.class_path"));
@@ -68,7 +68,7 @@ public class Config {
         libraryPath = forgeConfig.getString(Messages.get("config.name.library_path"), categoryGeneral, libraryPath, Messages.get("config.library_path"));
         maxRetry = forgeConfig.getInt(Messages.get("config.name.max_retry"), categoryGeneral, maxRetry, 1, 65535, Messages.get("config.max_retry"));
         maxDownloadSession = forgeConfig.getInt(Messages.get("config.name.max_download_session"), categoryGeneral, maxDownloadSession, 1, 65535, Messages.get("config.max_download_session"));
-        chineseMode = forgeConfig.getBoolean(Messages.get("config.name.chinese_mode"), categoryGeneral, chineseMode, Messages.get("config.chinese_mode"));
+        useMirror = forgeConfig.getBoolean(Messages.get("config.name.use_mirror"), categoryGeneral, useMirror, Messages.get("config.use_mirror"));
         alwaysShowConfigGUI = forgeConfig.getBoolean(Messages.get("config.name.always_show_config"), categoryGeneral, alwaysShowConfigGUI, Messages.get("config.always_show_config"));
         localPackPath = forgeConfig.getString(Messages.get("config.name.local_pack_path"), categoryGeneral, localPackPath, Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString(Messages.get("config.name.class_path"), categoryGeneral, classPath, Messages.get("config.class_path"));

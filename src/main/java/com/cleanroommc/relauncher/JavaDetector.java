@@ -41,6 +41,7 @@ public class JavaDetector {
                 }
             }
         }
+        out.sort((a, b) -> Integer.compare(b.getSpecification(), a.getSpecification()));
         return out;
     }
 }

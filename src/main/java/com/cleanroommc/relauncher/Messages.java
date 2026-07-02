@@ -13,10 +13,14 @@ import java.util.ResourceBundle;
 
 public class Messages {
     private static final ResourceBundle bundle;
-    private static final Locale locale = Locale.getDefault();
+    private static final Locale locale;
 
     static {
-        Relauncher.LOGGER.info("Locale null? {}", locale == null);
+        Locale loc = Locale.getDefault();
+        if ("en".equals(loc.getLanguage()) && "CN".equals(loc.getCountry())) {
+            loc = new Locale("zh", "CN");
+        }
+        locale = loc;
         Relauncher.LOGGER.info("Locale is {}", locale);
         bundle = ResourceBundle.getBundle("com.cleanroommc.relauncher.messages", locale, new UTF8Control());
     }

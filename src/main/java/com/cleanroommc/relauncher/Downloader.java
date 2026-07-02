@@ -140,12 +140,13 @@ public class Downloader {
     }
 
     static String downloadString(String url) throws IOException {
+        String finalUrl = Config.useMirror ? DownloadEntry.applyMirrorUrl(url) : url;
         try (CloseableHttpClient client = builder.build()) {
-            HttpGet httpGet = new HttpGet(url);
+            HttpGet httpGet = new HttpGet(finalUrl);
             return client.execute(httpGet, response -> {
                 int statusCode = response.getCode();
                 if (statusCode != 200) {
-                    throw new IOException("Unexpected HTTP status: " + statusCode + " for " + url);
+                    throw new IOException("Unexpected HTTP status: " + statusCode + " for " + finalUrl);
                 }
                 return IOUtils.toString(response.getEntity().getContent(), StandardCharsets.UTF_8).trim();
             });

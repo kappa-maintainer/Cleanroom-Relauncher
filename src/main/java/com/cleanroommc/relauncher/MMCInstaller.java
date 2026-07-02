@@ -1,19 +1,34 @@
 package com.cleanroommc.relauncher;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.miginfocom.swing.MigLayout;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.SystemUtils;
 
 
 import javax.swing.*;
+import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class MMCInstaller {
@@ -23,7 +38,7 @@ public class MMCInstaller {
     private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
     public static void showGUI() {
-        mainFrame.setLayout(new MigLayout());
+        mainFrame.setLayout(new MigLayout("", "[][grow][grow][]", "[][][][][][][][][][][]"));
 
         JLabel host = new JLabel(Messages.get("label.proxy_host"));
         JTextField proxyAddrTextField = new JTextField();
@@ -34,9 +49,93 @@ public class MMCInstaller {
         portSpinner.setValue(Config.proxyPort);
         JCheckBox useLocalCheckbox = new JCheckBox(Messages.get("checkbox.use_local_pack"));
 
+        JTextField mmcLocalPackPathField = new JTextField();
+        mmcLocalPackPathField.setText(Config.localPackPath);
+        mmcLocalPackPathField.setEnabled(Config.useLocalPack);
+        mmcLocalPackPathField.setToolTipText(Messages.get("tooltip.local_pack_path"));
+        mmcLocalPackPathField.setMinimumSize(new Dimension(200, 10));
+        GUIUtils.enlargeFont(mmcLocalPackPathField);
+
+        JButton mmcLocalPackBrowserButton = new JButton(Messages.get("button.browser"));
+        mmcLocalPackBrowserButton.setEnabled(Config.useLocalPack);
+        GUIUtils.enlargeFont(mmcLocalPackBrowserButton);
+
+        JFileChooser mmcPackPicker = new JFileChooser(SystemUtils.getUserDir());
+        mmcPackPicker.setMultiSelectionEnabled(false);
+        mmcPackPicker.setAcceptAllFileFilterUsed(false);
+        mmcPackPicker.setFileHidingEnabled(false);
+        mmcPackPicker.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        mmcPackPicker.addChoosableFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return file.getName().endsWith(".zip") || file.isDirectory();
+            }
+            @Override
+            public String getDescription() {
+                return Messages.get("filter.mmc_zip");
+            }
+        });
+
+        JCheckBox mirrorCheckBox = new JCheckBox(Messages.get("checkbox.chinese_mirror"));
+        mirrorCheckBox.setSelected(Config.useMirror);
+        mirrorCheckBox.setToolTipText(Messages.get("tooltip.chinese_mirror"));
+        GUIUtils.enlargeFont(mirrorCheckBox);
+
+        JLabel javaPathLabel = new JLabel(Messages.get("label.java_path"));
+        javaPathLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(javaPathLabel);
+
+        JTextField javaPathField = new JTextField();
+        javaPathField.setToolTipText(Messages.get("tooltip.java_path"));
+        javaPathField.setMinimumSize(new Dimension(300, 10));
+        GUIUtils.enlargeFont(javaPathField);
+
+        JLabel jvmStatus = new JLabel("\u2718");
+        jvmStatus.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(jvmStatus);
+
+        JButton detectJvmButton = new JButton(Messages.get("button.detect_java"));
+        GUIUtils.enlargeFont(detectJvmButton);
+        JButton browseJvmButton = new JButton(Messages.get("button.browse_java"));
+        GUIUtils.enlargeFont(browseJvmButton);
+
+        JFileChooser jvmPicker = new JFileChooser(SystemUtils.getUserDir());
+        jvmPicker.setMultiSelectionEnabled(false);
+        jvmPicker.setAcceptAllFileFilterUsed(false);
+        jvmPicker.addChoosableFileFilter(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return file.getName().equals("javaw.exe") || file.getName().equals("java") || file.isDirectory();
+            }
+            @Override
+            public String getDescription() {
+                return Messages.get("filter.java_executable");
+            }
+        });
+        jvmPicker.setFileHidingEnabled(false);
+        jvmPicker.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        JLabel warningLabel = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
+        warningLabel.setText(Messages.get("warning.need_java25"));
+        warningLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(warningLabel);
+
         JSeparator jSeparator1 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator2 = new JSeparator(JSeparator.HORIZONTAL);
-        
+        JSeparator jSeparator3 = new JSeparator(JSeparator.HORIZONTAL);
+
+        Runnable verifyJvm = () -> {
+            if (Initializer.isJavaNewerThan21(javaPathField.getText())) {
+                jvmStatus.setText("\u2714");
+                jvmStatus.setForeground(Color.GREEN);
+                confirmButton.setEnabled(true);
+            } else {
+                jvmStatus.setText("\u2718");
+                jvmStatus.setForeground(Color.RED);
+                confirmButton.setEnabled(false);
+            }
+        };
+
         setInteractable = value -> {
             confirmButton.setEnabled(value);
             if (!value || !useLocalCheckbox.isSelected()) {
@@ -44,41 +143,83 @@ public class MMCInstaller {
                 portSpinner.setEnabled(value);
             }
             useLocalCheckbox.setEnabled(value);
+            mirrorCheckBox.setEnabled(value);
+            mmcLocalPackPathField.setEnabled(value && Config.useLocalPack);
+            mmcLocalPackBrowserButton.setEnabled(value && Config.useLocalPack);
+            javaPathField.setEnabled(value);
+            detectJvmButton.setEnabled(value);
+            browseJvmButton.setEnabled(value);
         };
 
         confirmButton = new JButton(Messages.get("button.confirm"));
-        
-        mainFrame.add(useLocalCheckbox, "cell 0 0 2 1, grow, align center");
+        confirmButton.setEnabled(false);
+
+        List<JVMInfo> jvms = JavaDetector.getInstalledJVMs();
+        boolean hasJava25 = false;
+        if (!jvms.isEmpty()) {
+            javaPathField.setText(jvms.get(0).getFile().getAbsolutePath());
+            for (JVMInfo jvm : jvms) {
+                if (jvm.getSpecification() >= 25) {
+                    hasJava25 = true;
+                    break;
+                }
+            }
+        }
+        verifyJvm.run();
+
+        int row = 0;
+        mainFrame.add(useLocalCheckbox, "cell 0 " + row + " 2 1, grow, align center");
         GUIUtils.enlargeFont(useLocalCheckbox);
         useLocalCheckbox.setHorizontalAlignment(JCheckBox.CENTER);
-        
-        mainFrame.add(jSeparator1, "cell 0 1 2 1, grow");
-        
-        mainFrame.add(host, "cell 0 2, grow");
+        mainFrame.add(mirrorCheckBox, "cell 2 " + row + " 2 1, grow, align center");
+        mirrorCheckBox.setHorizontalAlignment(JCheckBox.CENTER);
+        row++;
+
+        mainFrame.add(mmcLocalPackPathField, "cell 0 " + row + " 3 1, grow");
+        mainFrame.add(mmcLocalPackBrowserButton, "cell 3 " + row + ", grow");
+        row++;
+
+        mainFrame.add(jSeparator1, "cell 0 " + row + " 4 1, grow");
+        row++;
+
+        mainFrame.add(javaPathLabel, "cell 0 " + row + ", grow");
+        mainFrame.add(javaPathField, "cell 1 " + row + " 2 1, grow");
+        mainFrame.add(jvmStatus, "cell 3 " + row + ", grow");
+        row++;
+
+        mainFrame.add(detectJvmButton, "cell 0 " + row + " 2 1, grow");
+        mainFrame.add(browseJvmButton, "cell 2 " + row + " 2 1, grow");
+        row++;
+
+        if (!hasJava25) {
+            mainFrame.add(warningLabel, "cell 0 " + row + " 4 1, grow");
+            row++;
+        }
+
+        mainFrame.add(jSeparator2, "cell 0 " + row + " 4 1, grow");
+        row++;
+
+        mainFrame.add(host, "cell 0 " + row + ", grow");
         GUIUtils.enlargeFont(host);
-        mainFrame.add(proxyAddrTextField, "cell 1 2, grow");
+        mainFrame.add(proxyAddrTextField, "cell 1 " + row + ", grow");
         GUIUtils.enlargeFont(proxyAddrTextField);
-        proxyAddrTextField.setMinimumSize(new Dimension(200, 10));
-        mainFrame.pack();
-        mainFrame.add(port, "cell 0 3, grow");
+        proxyAddrTextField.setMinimumSize(new Dimension(150, 10));
+        mainFrame.add(port, "cell 2 " + row + ", grow");
         GUIUtils.enlargeFont(port);
-        mainFrame.add(portSpinner, "cell 1 3, grow");
+        mainFrame.add(portSpinner, "cell 3 " + row + ", grow");
         GUIUtils.enlargeFont(portSpinner);
-        portSpinner.setMinimumSize(new Dimension(200, 10));
-        int width = port.getWidth() + portSpinner.getWidth();
-        mainFrame.add(mainStatusLabel, "cell 0 4 2 1, grow");
-        mainStatusLabel.setHorizontalAlignment(JLabel.CENTER);
+        portSpinner.setMinimumSize(new Dimension(80, 10));
+        row++;
+
+        mainFrame.add(mainStatusLabel, "cell 0 " + row + " 4 1, grow, align center");
         GUIUtils.enlargeFont(mainStatusLabel);
-        mainStatusLabel.setMinimumSize(new Dimension(width, 10));
-        
-        mainFrame.add(jSeparator2, "cell 0 5 2 1, grow");
-        
-        jSeparator1.setMinimumSize(new Dimension(width, 0));
-        jSeparator2.setMinimumSize(new Dimension(width, 0));;
-        
-        mainFrame.add(confirmButton, "cell 0 6 2 1, grow");
+        row++;
+
+        mainFrame.add(jSeparator3, "cell 0 " + row + " 4 1, grow");
+        row++;
+
+        mainFrame.add(confirmButton, "cell 0 " + row + " 4 1, grow");
         GUIUtils.enlargeFont(confirmButton, Font.BOLD, 20);
-        confirmButton.setMinimumSize(new Dimension(width, 10));
 
         mainFrame.setTitle(Messages.get("window.title"));
         mainFrame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -94,8 +235,11 @@ public class MMCInstaller {
             if (actionEvent.getSource().equals(confirmButton)) {
                 setInteractable.accept(false);
                 Config.useLocalPack = useLocalCheckbox.isSelected();
+                Config.localPackPath = mmcLocalPackPathField.getText();
                 Config.proxyAddr = proxyAddrTextField.getText();
                 Config.proxyPort = (int) portSpinner.getValue();
+                Config.useMirror = mirrorCheckBox.isSelected();
+                Config.javaPath = javaPathField.getText();
 
                 try {
                     Thread workingThread = new Thread(() -> {
@@ -109,27 +253,34 @@ public class MMCInstaller {
                             File patches = new File(instance, "patches");
                             libraries.mkdirs();
                             patches.mkdirs();
+                            if (Config.useMirror) {
+                                SwingUtilities.invokeLater(() -> mainStatusLabel.setText(Messages.get("mmc.status.replacing_urls")));
+                                replacePatchUrls(new File(packDir, "patches"));
+                            }
                             try {
                                 FileUtils.copyDirectory(new File(packDir, "libraries"), libraries);
                                 FileUtils.copyDirectory(new File(packDir, "patches"), patches);
                                 FileUtils.copyFile(new File(packDir, "mmc-pack.json"), new File(instance, "mmc-pack.json"));
                             } catch (IOException e) {
-                                throw new RuntimeException(e);
+                                throw new RuntimeException("Failed to copy MMC pack files", e);
                             }
                             Relauncher.LOGGER.info("Install finished");
-                            JDialog dialog = finishedDialog();
+                            JDialog dialog = finishedDialog(Config.javaPath != null && !Config.javaPath.isEmpty());
                             GUIUtils.setCentral(dialog);
                             dialog.setVisible(true);
                             synchronized (Relauncher.o) {
                                 Relauncher.o.wait();
                             }
-
+                            Config.save();
+                            synchronized (Relauncher.o) {
+                                Relauncher.o.notify();
+                            }
                         } catch (Throwable e) {
-                            mainStatusLabel.setText(e.getMessage());
-                        }
-                        Config.save();
-                        synchronized (Relauncher.o) {
-                            Relauncher.o.notify();
+                            Relauncher.LOGGER.error("MMC installation failed: {}", e.getMessage(), e);
+                            SwingUtilities.invokeLater(() -> {
+                                mainStatusLabel.setText(Messages.get("mmc.status.install_failed"));
+                                setInteractable.accept(true);
+                            });
                         }
                     }, "MMC installation Working Thread");
                     workingThread.start();
@@ -137,23 +288,61 @@ public class MMCInstaller {
                     Relauncher.LOGGER.error(t.getMessage());
                     Arrays.stream(t.getStackTrace()).forEach(Relauncher.LOGGER::info);
                     Config.configFile.delete();
-                    mainStatusLabel.setText(t.getMessage());
+                    mainStatusLabel.setText(Messages.get("mmc.status.install_failed"));
                     setInteractable.accept(true);
                 }
             }
         });
 
+        javaPathField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { verifyJvm.run(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { verifyJvm.run(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { verifyJvm.run(); }
+        });
 
-        useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack"));
+        detectJvmButton.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(detectJvmButton)) {
+                JvmDetectorDialog.show(mainFrame, selectedPath -> {
+                    javaPathField.setText(selectedPath);
+                    verifyJvm.run();
+                }, () -> setInteractable.accept(false), () -> setInteractable.accept(true));
+            }
+        });
+
+        browseJvmButton.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(browseJvmButton)) {
+                GUIUtils.setCentral(jvmPicker);
+                int r = jvmPicker.showOpenDialog(mainFrame);
+                if (r == JFileChooser.APPROVE_OPTION) {
+                    javaPathField.setText(jvmPicker.getSelectedFile().getAbsolutePath());
+                    verifyJvm.run();
+                }
+            }
+        });
+
+
+        useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack_mmc"));
         useLocalCheckbox.setSelected(Config.useLocalPack);
         proxyAddrTextField.setText(Config.proxyAddr);
         portSpinner.setValue(Config.proxyPort);
 
-        useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack_mmc"));
         useLocalCheckbox.addItemListener(itemEvent -> {
             boolean selected = itemEvent.getStateChange() == ItemEvent.SELECTED;
             portSpinner.setEnabled(!selected);
             proxyAddrTextField.setEnabled(!selected);
+            mmcLocalPackPathField.setEnabled(selected);
+            mmcLocalPackBrowserButton.setEnabled(selected);
+        });
+
+        mmcLocalPackBrowserButton.addActionListener(actionEvent -> {
+            if (actionEvent.getSource().equals(mmcLocalPackBrowserButton)) {
+                GUIUtils.setCentral(mmcPackPicker);
+                int r = mmcPackPicker.showOpenDialog(mainFrame);
+                if (r == JFileChooser.APPROVE_OPTION) {
+                    File selected = mmcPackPicker.getSelectedFile();
+                    mmcLocalPackPathField.setText(selected.getAbsolutePath());
+                }
+            }
         });
 
         proxyAddrTextField.setToolTipText(Messages.get("tooltip.proxy_addr"));
@@ -164,7 +353,7 @@ public class MMCInstaller {
         portSpinner.setModel(new SpinnerNumberModel());
 
         mainStatusLabel.setText(Messages.get("status.idle"));
-        mainStatusLabel.setHorizontalAlignment(JTextField.CENTER);
+        mainStatusLabel.setHorizontalAlignment(JLabel.CENTER);
         
 
         Relauncher.LOGGER.info("Launching GUI");
@@ -184,9 +373,59 @@ public class MMCInstaller {
 
     }
 
-    private static JDialog finishedDialog() {
+    private static void replacePatchUrls(File patchesDir) {
+        File[] jsonFiles = patchesDir.listFiles((dir, name) -> name.endsWith(".json"));
+        if (jsonFiles == null) return;
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        for (File jsonFile : jsonFiles) {
+            try {
+                String content = new String(Files.readAllBytes(jsonFile.toPath()), StandardCharsets.UTF_8);
+                JsonObject root = new JsonParser().parse(content).getAsJsonObject();
+                JsonArray libraries = root.getAsJsonArray("libraries");
+                if (libraries != null) {
+                    for (JsonElement lib : libraries) {
+                        JsonObject libObj = lib.getAsJsonObject();
+                        JsonObject downloads = libObj.getAsJsonObject("downloads");
+                        if (downloads != null) {
+                            replaceUrlsInDownloads(downloads);
+                        }
+                    }
+                }
+                try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+                        new FileOutputStream(jsonFile), StandardCharsets.UTF_8))) {
+                    writer.print(gson.toJson(root));
+                }
+                Relauncher.LOGGER.info("Replaced URLs in {}", jsonFile.getName());
+            } catch (IOException e) {
+                Relauncher.LOGGER.error("Failed to replace URLs in {}", jsonFile.getName(), e);
+            }
+        }
+    }
+
+    private static void replaceUrlsInDownloads(JsonObject downloads) {
+        JsonObject artifact = downloads.getAsJsonObject("artifact");
+        if (artifact != null && artifact.has("url")) {
+            artifact.addProperty("url", DownloadEntry.applyMirrorUrl(artifact.get("url").getAsString()));
+        }
+        JsonObject classifiers = downloads.getAsJsonObject("classifiers");
+        if (classifiers != null) {
+            for (Map.Entry<String, JsonElement> entry : classifiers.entrySet()) {
+                JsonObject classifier = entry.getValue().getAsJsonObject();
+                if (classifier.has("url")) {
+                    classifier.addProperty("url", DownloadEntry.applyMirrorUrl(classifier.get("url").getAsString()));
+                }
+            }
+        }
+    }
+    private static JDialog finishedDialog(boolean javaConfigured) {
         JDialog dialog = new JDialog();
-        JTextArea area = new JTextArea(Messages.get("mmc.complete_message"));
+        String message;
+        if (javaConfigured) {
+            message = Messages.get("mmc.complete_message");
+        } else {
+            message = Messages.get("mmc.complete_message_no_java");
+        }
+        JTextArea area = new JTextArea(message);
         area.setFocusable(false);
         GUIUtils.enlargeFont(area, Font.BOLD, 20);
         JButton quit = new JButton(Messages.get("button.quit"));

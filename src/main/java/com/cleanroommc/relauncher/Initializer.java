@@ -199,7 +199,10 @@ public class Initializer {
 
         detectJvmButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(detectJvmButton)) {
-                showDetectorDialog(pathText);
+                JvmDetectorDialog.show(mainFrame, selectedPath -> {
+                    pathText.setText(selectedPath);
+                    verifyJVM.run();
+                }, () -> setGUIInteractable(false), () -> setGUIInteractable(true));
             }
         });
         
@@ -448,22 +451,7 @@ public class Initializer {
         mainFrame.setTransferHandler(mmcDropHandler);
         localPackPathField.setTransferHandler(mmcDropHandler);
 
-        new Thread(() -> {
-            try {
-                String ver = CleanroomVersionParser.getVersion();
-                latestVersionFetched = ver;
-                SwingUtilities.invokeLater(() -> {
-                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + ver);
-                    updateLaunchButtonText();
-                });
-            } catch (Exception e) {
-                latestVersionFetchFailed = true;
-                SwingUtilities.invokeLater(() -> {
-                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.version_fetch_failed"));
-                    updateLaunchButtonText();
-                });
-            }
-        }, "Version Fetch Thread").start();
+        fetchLatestVersion();
 
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
@@ -534,89 +522,6 @@ public class Initializer {
         mainFrame.setVisible(false);
     }
 
-    private static void showDetectorDialog(JTextField pathField) {
-        JDialog detector = new JDialog(mainFrame.getOwner());
-        detector.setFocusableWindowState(true);
-        detector.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-        detector.setLayout(new MigLayout(
-                "",
-                "[grow][grow]",
-                "[grow][grow][grow][grow]"
-        ));
-        DefaultListModel<JVMInfo> model = new DefaultListModel<>();
-        JList<JVMInfo> list = new JList<>(model);
-        JLabel info = new JLabel(Messages.get("status.idle"));
-        info.setHorizontalAlignment(JLabel.CENTER);
-        JButton confirm = new JButton(Messages.get("button.confirm"));
-        JButton cancel = new JButton(Messages.get("button.cancel"));
-        
-        JLabel warningLabel = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
-        warningLabel.setText(Messages.get("warning.need_java25"));
-        warningLabel.setHorizontalAlignment(JLabel.CENTER);
-        GUIUtils.enlargeFont(warningLabel);
-
-        detector.add(list, "cell 0 0 2 2, grow");
-        GUIUtils.enlargeFont(list);
-        detector.add(warningLabel, "cell 0 2 2 1, grow");
-        detector.add(info, "cell 0 3 2 1, grow");
-        GUIUtils.enlargeFont(info);
-        detector.add(cancel, "cell 0 4, grow");
-        GUIUtils.enlargeFont(cancel);
-        detector.add(confirm, "cell 1 4, grow");
-        GUIUtils.enlargeFont(confirm, Font.BOLD, 20);
-
-        list.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        list.setLayoutOrientation(JList.VERTICAL);
-        list.setVisibleRowCount(-1);
-        list.addListSelectionListener(listSelectionEvent -> {
-            String path = list.getSelectedValue().getFile().getAbsolutePath();
-            info.setText(path);
-            info.setToolTipText(path);
-            detector.pack();
-        });
-        list.setMinimumSize(new Dimension(300, 200));
-
-        cancel.addActionListener(actionEvent -> {
-            if (actionEvent.getSource().equals(cancel)) {
-                detector.setVisible(false);
-                setGUIInteractable(true);
-            }
-        });
-
-        confirm.addActionListener(actionEvent -> {
-            if (actionEvent.getSource().equals(confirm)) {
-                detector.setVisible(false);
-                setGUIInteractable(true);
-                pathField.setText(list.getSelectedValue().getFile().getAbsolutePath());
-                verifyJVM.run();
-            }
-        });
-
-        cancel.setEnabled(false);
-        confirm.setEnabled(false);
-        info.setText(Messages.get("status.scanning"));
-        Relauncher.LOGGER.info("Scanning...");
-        detector.pack();
-        GUIUtils.setCentral(detector);
-        detector.setAlwaysOnTop(true);
-        setGUIInteractable(false);
-        detector.setVisible(true);
-        detector.setMinimumSize(detector.getSize());
-
-        Thread scan = new Thread(() -> {
-            for (JVMInfo i : JavaDetector.getInstalledJVMs()) {
-                model.addElement(i);
-            }
-            cancel.setEnabled(true);
-            confirm.setEnabled(true);
-            info.setText(Messages.get("status.scan_complete"));
-            detector.pack();
-            GUIUtils.setCentral(detector);
-        });
-        scan.start();
-
-    }
-
     private static void showAdvancedSettingDialog() {
         JDialog advSetting = new JDialog(mainFrame.getOwner());
         advSetting.setLayout(new MigLayout(
@@ -643,7 +548,7 @@ public class Initializer {
         proxyAddrTextField.setText(Config.proxyAddr);
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
         JCheckBox chineseModeCheckbox = new JCheckBox(Messages.get("checkbox.chinese_mirror"));
-        chineseModeCheckbox.setSelected(Config.chineseMode);
+        chineseModeCheckbox.setSelected(Config.useMirror);
         JCheckBox alwaysShowConfigCheckbox = new JCheckBox(Messages.get("checkbox.always_show_config"));
         alwaysShowConfigCheckbox.setSelected(Config.alwaysShowConfigGUI);
         JLabel maxRetryLabel = new JLabel(Messages.get("label.max_retry"));
@@ -729,13 +634,17 @@ public class Initializer {
             if (actionEvent.getSource().equals(confirm)) {
                 advSetting.setVisible(false);
                 setGUIInteractable(true);
-                Config.chineseMode = chineseModeCheckbox.isSelected();
+                boolean wasMirror = Config.useMirror;
+                Config.useMirror = chineseModeCheckbox.isSelected();
                 Config.proxyPort = (int) portSpinner.getValue();
                 Config.proxyAddr = proxyAddrTextField.getText();
                 Config.maxDownloadSession = (int) maxSessionSpinner.getValue();
                 Config.maxRetry = (int) maxRetrySpinner.getValue();
                 Config.respectLibraryStructure = groupNameInPathCheckbox.isSelected();
                 Config.alwaysShowConfigGUI = alwaysShowConfigCheckbox.isSelected();
+                if (!wasMirror && Config.useMirror && latestVersionFetchFailed) {
+                    fetchLatestVersion();
+                }
             }
         });
 
@@ -923,6 +832,28 @@ public class Initializer {
             String cached = CleanroomVersionParser.readCachedVersion();
             localVersionLabel.setText(Messages.get("label.local_version") + ": " + (cached != null ? cached : CleanroomVersionParser.BUNDLED_VERSION));
         }
+    }
+
+    private static void fetchLatestVersion() {
+        latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
+        new Thread(() -> {
+            try {
+                CleanroomVersionParser.resetVersion();
+                String ver = CleanroomVersionParser.getVersion();
+                latestVersionFetched = ver;
+                latestVersionFetchFailed = false;
+                SwingUtilities.invokeLater(() -> {
+                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + ver);
+                    updateLaunchButtonText();
+                });
+            } catch (Exception e) {
+                latestVersionFetchFailed = true;
+                SwingUtilities.invokeLater(() -> {
+                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.version_fetch_failed"));
+                    updateLaunchButtonText();
+                });
+            }
+        }, "Version Fetch Thread").start();
     }
 
     private static class LinkButton extends JButton{

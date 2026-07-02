@@ -37,10 +37,8 @@ public class DownloadEntry {
         destination = new File(libDir, fileName);
         try {
             String urlString = triple.getMiddle();
-            if (!Config.chineseMode) {
-                urlString = urlString.replace("https://repo.maven.apache.org/maven2", "https://maven.aliyun.com/repository/public");
-                urlString = urlString.replace("https://repo.cleanroommc.com/releases", "https://nexus.jsdu.cn/repository/cleanroommc-releases");
-                urlString = urlString.replace("https://maven.arcseekers.com/releases", "https://nexus.jsdu.cn/repository/arcseekers-releases");
+            if (Config.useMirror) {
+                urlString = applyMirrorUrl(urlString);
             }
             url = new URL(urlString);
         } catch (MalformedURLException e) {
@@ -67,5 +65,12 @@ public class DownloadEntry {
 
     public int getAttempts() {
         return attempts.get();
+    }
+
+    public static String applyMirrorUrl(String url) {
+        url = url.replace("https://repo.maven.apache.org/maven2", "https://maven.aliyun.com/repository/public");
+        url = url.replace("https://repo.cleanroommc.com/releases", "https://nexus.jsdu.cn/repository");
+        url = url.replace("https://maven.arcseekers.com/releases", "https://nexus.jsdu.cn/repository");
+        return url;
     }
 }

@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraftforge.fml.common.versioning.ComparableVersion;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;
@@ -25,13 +26,10 @@ import java.util.zip.ZipFile;
 public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
-        File libraries = new File(mmcDir, "libraries");
-        File universalJar = new File(libraries, "cleanroom-" + CleanroomVersionParser.BUNDLED_VERSION + "-universal.jar");
         mmcDir.mkdir();
         File pack = new File(mmcDir, "mmcpack.zip");
         if (!Config.useLocalPack) {
             String version = CleanroomVersionParser.getVersion();
-            universalJar = new File(libraries, "cleanroom-" + version + "-universal.jar");
             boolean needDownload = true;
             if (pack.exists()) {
                 String cachedVersion = CleanroomVersionParser.readCachedVersion();
@@ -44,6 +42,9 @@ public class MMCPackDownloader {
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                 Initializer.setStatusText(Messages.get("status.downloading_mmc_pack", version));
                 String zipUrl = "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + ".zip";
+                if (Config.useMirror) {
+                    zipUrl = DownloadEntry.applyMirrorUrl(zipUrl);
+                }
                 String sha1 = fetchSha1(zipUrl + ".sha1");
                 List<DownloadEntry> list = new ArrayList<>(1);
                 list.add(new DownloadEntry(new URL(zipUrl), pack, sha1));
@@ -73,7 +74,39 @@ public class MMCPackDownloader {
                 extractBundledZip(pack);
             }
         }
-        
+
+        File universalJar = extractPackContent(mmcDir, pack);
+        File extractedLibraries = new File(mmcDir, "libraries");
+        File extractedPatches = new File(mmcDir, "patches");
+        if (!extractedLibraries.exists() || !extractedPatches.exists()) {
+            Relauncher.LOGGER.warn("MMC pack extraction produced incomplete result");
+            if (Config.useLocalPack && !Config.localPackPath.isEmpty()) {
+                throw new IOException("Local MMC pack does not contain required directories");
+            }
+            Relauncher.LOGGER.info("Cleaning up and retrying with bundled pack");
+            pack.delete();
+            try {
+                FileUtils.deleteDirectory(mmcDir);
+            } catch (IOException ignored) {
+            }
+            mmcDir.mkdir();
+            extractBundledZip(pack);
+            universalJar = extractPackContent(mmcDir, pack);
+            if (!extractedLibraries.exists() || !extractedPatches.exists()) {
+                throw new IOException("MMC pack extraction failed even with bundled pack");
+            }
+        }
+
+        if (universalJar.exists()) {
+            File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
+            Files.copy(universalJar.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        }
+
+    }
+
+    private static File extractPackContent(File mmcDir, File pack) throws IOException {
+        File libraries = new File(mmcDir, "libraries");
+        File universalJar = new File(libraries, "cleanroom-" + CleanroomVersionParser.BUNDLED_VERSION + "-universal.jar");
         Relauncher.LOGGER.info("Extracting MMC pack");
         try (ZipFile zipFile = new ZipFile(pack)) {
             Enumeration<? extends ZipEntry> entries = zipFile.entries();
@@ -110,11 +143,7 @@ public class MMCPackDownloader {
             pack.delete();
             throw e;
         }
-        if (universalJar.exists()) {
-            File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
-            Files.copy(universalJar.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
-        }
-
+        return universalJar;
     }
     
     private static boolean isVersionNewer(String latest, String cached) {

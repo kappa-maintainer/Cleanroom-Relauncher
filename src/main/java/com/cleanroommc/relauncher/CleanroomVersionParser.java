@@ -29,24 +29,14 @@ public class CleanroomVersionParser {
         }
         Relauncher.LOGGER.info("Parsing latest Cleanroom versions");
         Initializer.setStatusText(Messages.get("status.parsing_versions"));
-        File metadata = new File(Relauncher.workingDir, "maven-metadata.xml");
-        String version = BUNDLED_VERSION;
 
         Relauncher.LOGGER.info("Downloading metadata");
-        List<DownloadEntry> list = new ArrayList<>(1);
-        list.add(new DownloadEntry(new URL("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml"), metadata, ""));
-        try {
-            Downloader.downloadAll(list);
-        } catch (Exception e) {
-            Relauncher.LOGGER.error(e);
-            throw new RuntimeException(e);
-        }
-        BufferedReader reader = Files.newBufferedReader(metadata.toPath());
-        while (reader.ready()) {
-            String temp;
-            String line = reader.readLine();
-            if (line.contains("<version>")) {
-                temp = line.substring(line.indexOf("<version>") + 9, line.indexOf("</version>"));
+        String xmlContent = Downloader.downloadString("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml");
+        String version = BUNDLED_VERSION;
+        for (String line : xmlContent.split("\n")) {
+            int startIdx = line.indexOf("<version>");
+            if (startIdx >= 0) {
+                String temp = line.substring(startIdx + 9, line.indexOf("</version>"));
                 if (!temp.contains("build")) {
                     version = temp;
                 }
@@ -54,13 +44,16 @@ public class CleanroomVersionParser {
         }
         Relauncher.LOGGER.info("Found version {}", version);
         Initializer.setStatusText(Messages.get("status.found_version", version));
-        reader.close();
         CleanroomVersionParser.version = version;
         return version;
     }
     
     public static void setVersion(String version) {
         CleanroomVersionParser.version = version;
+    }
+
+    public static void resetVersion() {
+        CleanroomVersionParser.version = "";
     }
 
     public static String readCachedVersion() {
