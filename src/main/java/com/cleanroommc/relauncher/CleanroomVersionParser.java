@@ -87,7 +87,7 @@ public class CleanroomVersionParser {
         }
     }
 
-    private static String readVersionFromMMCPackJson(File jsonFile) {
+    static String readVersionFromMMCPackJson(File jsonFile) {
         try (FileInputStream fis = new FileInputStream(jsonFile)) {
             JsonObject root = new JsonParser().parse(IOUtils.toString(fis, StandardCharsets.UTF_8)).getAsJsonObject();
             return readVersionFromJsonObject(root);

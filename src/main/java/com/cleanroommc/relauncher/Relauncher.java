@@ -72,6 +72,20 @@ public class Relauncher implements IFMLLoadingPlugin {
             ExitWrapper.exit(0);
         } else {
             Messages.getLocale();
+            StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
+            if (isServer(stacks)) return;
+            String entry = stacks[stacks.length - 1].getClassName();
+            if (entry.startsWith("org.prismlauncher") || entry.startsWith("org.multimc") || entry.startsWith("org.polymc")) {
+                if (!workingDir.exists()) {
+                    workingDir.mkdirs();
+                }
+                Config.syncConfig();
+                if (Config.showConfigGUI) {
+                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+                    MMCInstaller.showGUI();
+                    ExitWrapper.exit(0);
+                }
+            }
         }
     }
 

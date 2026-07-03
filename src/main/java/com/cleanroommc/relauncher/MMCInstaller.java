@@ -34,6 +34,11 @@ import java.util.function.Consumer;
 public class MMCInstaller {
 
     private static final JLabel mainStatusLabel = new JLabel();
+    private static JLabel latestVersionLabel;
+    private static JLabel localVersionLabel;
+    private static String latestVersionFetched = null;
+    private static boolean latestVersionFetchFailed = false;
+    private static boolean versionFetchInProgress = false;
     private static JButton confirmButton;
     private static final JFrame mainFrame = new JFrame();
     private static Consumer<Boolean> setInteractable;
@@ -123,6 +128,8 @@ public class MMCInstaller {
         JSeparator jSeparator1 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator2 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator3 = new JSeparator(JSeparator.HORIZONTAL);
+        JSeparator jSeparator4 = new JSeparator(JSeparator.HORIZONTAL);
+        JSeparator jSeparator5 = new JSeparator(JSeparator.HORIZONTAL);
 
         Runnable verifyJvm = () -> {
             if (Initializer.isJavaNewerThan21(javaPathField.getText())) {
@@ -199,20 +206,38 @@ public class MMCInstaller {
         mainFrame.add(jSeparator2, "cell 0 " + row + " 4 1, grow");
         row++;
 
-        mainFrame.add(host, "cell 0 " + row + ", grow");
+        JPanel proxyPanel = new JPanel(new MigLayout("", "[][grow][][60px]", "[]"));
+        proxyPanel.add(host);
         GUIUtils.enlargeFont(host);
-        mainFrame.add(proxyAddrTextField, "cell 1 " + row + ", grow");
+        proxyPanel.add(proxyAddrTextField, "grow");
         GUIUtils.enlargeFont(proxyAddrTextField);
         proxyAddrTextField.setMinimumSize(new Dimension(150, 10));
-        mainFrame.add(port, "cell 2 " + row + ", grow");
+        proxyPanel.add(port);
         GUIUtils.enlargeFont(port);
-        mainFrame.add(portSpinner, "cell 3 " + row + ", grow");
+        proxyPanel.add(portSpinner);
         GUIUtils.enlargeFont(portSpinner);
         portSpinner.setMinimumSize(new Dimension(80, 10));
+        mainFrame.add(proxyPanel, "cell 0 " + row + " 4 1, grow");
+        row++;
+
+        mainFrame.add(jSeparator4, "cell 0 " + row + " 4 1, grow");
         row++;
 
         mainFrame.add(mainStatusLabel, "cell 0 " + row + " 4 1, grow, align center");
         GUIUtils.enlargeFont(mainStatusLabel);
+        row++;
+
+        mainFrame.add(jSeparator5, "cell 0 " + row + " 4 1, grow");
+        row++;
+
+        latestVersionLabel = new JLabel(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
+        latestVersionLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(latestVersionLabel);
+        localVersionLabel = new JLabel(Messages.get("label.local_version") + ": ?");
+        localVersionLabel.setHorizontalAlignment(JLabel.CENTER);
+        GUIUtils.enlargeFont(localVersionLabel);
+        mainFrame.add(latestVersionLabel, "cell 0 " + row + " 2 1, grow, align center");
+        mainFrame.add(localVersionLabel, "cell 2 " + row + " 2 1, grow, align center");
         row++;
 
         mainFrame.add(jSeparator3, "cell 0 " + row + " 4 1, grow");
@@ -265,16 +290,11 @@ public class MMCInstaller {
                                 throw new RuntimeException("Failed to copy MMC pack files", e);
                             }
                             Relauncher.LOGGER.info("Install finished");
-                            JDialog dialog = finishedDialog(Config.javaPath != null && !Config.javaPath.isEmpty());
+                            Config.showConfigGUI = false;
+                            Config.save();
+                            JDialog dialog = finishedDialog();
                             GUIUtils.setCentral(dialog);
                             dialog.setVisible(true);
-                            synchronized (Relauncher.o) {
-                                Relauncher.o.wait();
-                            }
-                            Config.save();
-                            synchronized (Relauncher.o) {
-                                Relauncher.o.notify();
-                            }
                         } catch (Throwable e) {
                             Relauncher.LOGGER.error("MMC installation failed: {}", e.getMessage(), e);
                             SwingUtilities.invokeLater(() -> {
@@ -328,10 +348,23 @@ public class MMCInstaller {
 
         useLocalCheckbox.addItemListener(itemEvent -> {
             boolean selected = itemEvent.getStateChange() == ItemEvent.SELECTED;
+            Config.useLocalPack = selected;
             portSpinner.setEnabled(!selected);
             proxyAddrTextField.setEnabled(!selected);
             mmcLocalPackPathField.setEnabled(selected);
             mmcLocalPackBrowserButton.setEnabled(selected);
+            updateVersionStatusBar();
+        });
+
+        mirrorCheckBox.addItemListener(itemEvent -> {
+            if (itemEvent.getStateChange() == ItemEvent.SELECTED) {
+                Config.useMirror = true;
+                if (versionFetchInProgress || latestVersionFetchFailed) {
+                    fetchLatestVersion();
+                }
+            } else {
+                Config.useMirror = false;
+            }
         });
 
         mmcLocalPackBrowserButton.addActionListener(actionEvent -> {
@@ -342,6 +375,16 @@ public class MMCInstaller {
                     File selected = mmcPackPicker.getSelectedFile();
                     mmcLocalPackPathField.setText(selected.getAbsolutePath());
                 }
+            }
+        });
+
+        mmcLocalPackPathField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { onChange(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { onChange(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { onChange(); }
+            private void onChange() {
+                Config.localPackPath = mmcLocalPackPathField.getText();
+                updateVersionStatusBar();
             }
         });
 
@@ -360,9 +403,11 @@ public class MMCInstaller {
         mainFrame.validate();
         //mainFrame.setSize(GUIUtils.scaledWidth / 2, GUIUtils.scaledHeight / 4);
         mainFrame.pack();
-        mainFrame.setResizable(false);
         GUIUtils.setCentral(mainFrame);
+        updateVersionStatusBar();
+        fetchLatestVersion();
         mainFrame.setVisible(true);
+        mainFrame.setMinimumSize(mainFrame.getSize());
         synchronized (Relauncher.o) {
             try {
                 Relauncher.o.wait();
@@ -417,14 +462,9 @@ public class MMCInstaller {
             }
         }
     }
-    private static JDialog finishedDialog(boolean javaConfigured) {
+    private static JDialog finishedDialog() {
         JDialog dialog = new JDialog();
-        String message;
-        if (javaConfigured) {
-            message = Messages.get("mmc.complete_message");
-        } else {
-            message = Messages.get("mmc.complete_message_no_java");
-        }
+        String message = Messages.get("mmc.complete_message");
         JTextArea area = new JTextArea(message);
         area.setFocusable(false);
         GUIUtils.enlargeFont(area, Font.BOLD, 20);
@@ -444,5 +484,52 @@ public class MMCInstaller {
         dialog.setResizable(false);
         dialog.setAlwaysOnTop(true);
         return dialog;
+    }
+
+    private static void fetchLatestVersion() {
+        versionFetchInProgress = true;
+        latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
+        new Thread(() -> {
+            try {
+                CleanroomVersionParser.resetVersion();
+                String ver = CleanroomVersionParser.getVersion();
+                latestVersionFetched = ver;
+                latestVersionFetchFailed = false;
+                versionFetchInProgress = false;
+                SwingUtilities.invokeLater(() -> {
+                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + ver);
+                });
+            } catch (Exception e) {
+                latestVersionFetchFailed = true;
+                versionFetchInProgress = false;
+                SwingUtilities.invokeLater(() -> {
+                    latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.version_fetch_failed"));
+                });
+            }
+        }, "MMC Version Fetch Thread").start();
+    }
+
+    private static void updateVersionStatusBar() {
+        File instance = Launch.minecraftHome.getParentFile();
+        File installedPackJson = new File(instance, "mmc-pack.json");
+        String installedVersion = null;
+        if (installedPackJson.exists()) {
+            installedVersion = CleanroomVersionParser.readVersionFromMMCPackJson(installedPackJson);
+        }
+        String installedDisplay = installedVersion != null ? installedVersion : "?";
+
+        if (Config.useLocalPack && !Config.localPackPath.isEmpty()) {
+            String localVer = CleanroomVersionParser.readVersionFromLocalMMCPack(Config.localPackPath);
+            localVersionLabel.setText(Messages.get("label.local_version") + ": " + installedDisplay + " -> " + (localVer != null ? localVer : "?"));
+        } else {
+            localVersionLabel.setText(Messages.get("label.local_version") + ": " + installedDisplay);
+            if (latestVersionFetched != null) {
+                latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + latestVersionFetched);
+            } else if (latestVersionFetchFailed) {
+                latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.version_fetch_failed"));
+            } else {
+                latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
+            }
+        }
     }
 }
