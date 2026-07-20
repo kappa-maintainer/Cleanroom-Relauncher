@@ -9,7 +9,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,7 +25,7 @@ import java.util.zip.ZipFile;
 public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
-        mmcDir.mkdir();
+        ensureDirectory(mmcDir, "MMC pack working directory");
         File pack = new File(mmcDir, "mmcpack.zip");
         if (!Config.useLocalPack) {
             String version = CleanroomVersionParser.getVersion();
@@ -76,9 +75,8 @@ public class MMCPackDownloader {
         }
 
         File universalJar = extractPackContent(mmcDir, pack);
-        File extractedLibraries = new File(mmcDir, "libraries");
         File extractedPatches = new File(mmcDir, "patches");
-        if (!extractedLibraries.exists() || !extractedPatches.exists()) {
+        if (!extractedPatches.exists()) {
             Relauncher.LOGGER.warn("MMC pack extraction produced incomplete result");
             if (Config.useLocalPack && !Config.localPackPath.isEmpty()) {
                 throw new IOException("Local MMC pack does not contain required directories");
@@ -89,15 +87,15 @@ public class MMCPackDownloader {
                 FileUtils.deleteDirectory(mmcDir);
             } catch (IOException ignored) {
             }
-            mmcDir.mkdir();
+            ensureDirectory(mmcDir, "MMC pack working directory");
             extractBundledZip(pack);
             universalJar = extractPackContent(mmcDir, pack);
-            if (!extractedLibraries.exists() || !extractedPatches.exists()) {
+            if (!extractedPatches.exists()) {
                 throw new IOException("MMC pack extraction failed even with bundled pack");
             }
         }
 
-        if (universalJar.exists()) {
+        if (universalJar != null && universalJar.exists()) {
             File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
             Files.copy(universalJar.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
@@ -129,9 +127,9 @@ public class MMCPackDownloader {
                 }
                 File entryDestination = new File(mmcDir, entry.getName());
                 if (entry.isDirectory()) {
-                    entryDestination.mkdirs();
+                    ensureDirectory(entryDestination, "ZIP entry directory");
                 } else {
-                    entryDestination.getParentFile().mkdirs();
+                    ensureDirectory(entryDestination.getParentFile(), "ZIP entry parent directory");
                     try (InputStream in = zipFile.getInputStream(entry);
                         OutputStream out = Files.newOutputStream(entryDestination.toPath())) {
                         IOUtils.copy(in, out);
@@ -143,25 +141,56 @@ public class MMCPackDownloader {
             pack.delete();
             throw e;
         }
-        return universalJar;
+        return containsLibrariesDirectory(pack) ? universalJar : null;
     }
     
+    static boolean containsLibrariesDirectory(File pack) throws IOException {
+        try (ZipFile zipFile = new ZipFile(pack)) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while (entries.hasMoreElements()) {
+                String name = entries.nextElement().getName();
+                if (name.equals("libraries") || name.startsWith("libraries/")) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
     private static boolean isVersionNewer(String latest, String cached) {
         return new ComparableVersion(latest).compareTo(new ComparableVersion(cached)) > 0;
     }
 
-    private static void extractBundledZip(File pack) {
-        Relauncher.LOGGER.info("Attempt to unzip");
-        try {
-            FileOutputStream out = new FileOutputStream(pack);
-            InputStream in = Relauncher.class.getResourceAsStream("/mmcpack.zip");
+    private static void extractBundledZip(File pack) throws IOException {
+        Relauncher.LOGGER.info("Attempt to unzip bundled MMC pack to {}", pack.getAbsolutePath());
+        InputStream resource = Relauncher.class.getResourceAsStream("/mmcpack.zip");
+        if (resource == null) {
+            String message = "Bundled MMC pack resource /mmcpack.zip was not found";
+            Relauncher.LOGGER.error(message);
+            throw new IOException(message);
+        }
+        try (InputStream in = resource; OutputStream out = Files.newOutputStream(pack.toPath())) {
             IOUtils.copy(in, out);
-            out.close();
-            in.close();
         } catch (IOException e) {
-            Relauncher.LOGGER.error("Failed to unzip bundled mmc pack");
-            Relauncher.LOGGER.error(e.getMessage());
-            throw new RuntimeException(e);
+            Relauncher.LOGGER.error("Failed to copy bundled MMC pack to {}", pack.getAbsolutePath(), e);
+            throw e;
+        }
+    }
+
+    private static void ensureDirectory(File directory, String description) throws IOException {
+        if (directory == null) {
+            throw new IOException(description + " has no path");
+        }
+        if (directory.exists()) {
+            if (!directory.isDirectory()) {
+                throw new IOException(description + " is not a directory: " + directory.getAbsolutePath());
+            }
+            return;
+        }
+        if (!directory.mkdirs() && !directory.isDirectory()) {
+            String message = "Failed to create " + description + ": " + directory.getAbsolutePath();
+            Relauncher.LOGGER.error(message);
+            throw new IOException(message);
         }
     }
 

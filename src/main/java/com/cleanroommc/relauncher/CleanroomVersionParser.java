@@ -20,7 +20,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class CleanroomVersionParser {
-    public static final String BUNDLED_VERSION = "0.5.14-alpha";
+    public static final String BUNDLED_VERSION = "0.6.2-alpha";
     private static String version = "";
 
     public static String getVersion() throws IOException {

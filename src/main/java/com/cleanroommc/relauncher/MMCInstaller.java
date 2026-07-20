@@ -86,65 +86,13 @@ public class MMCInstaller {
         mirrorCheckBox.setToolTipText(Messages.get("tooltip.chinese_mirror"));
         GUIUtils.enlargeFont(mirrorCheckBox);
 
-        JLabel javaPathLabel = new JLabel(Messages.get("label.java_path"));
-        javaPathLabel.setHorizontalAlignment(JLabel.CENTER);
-        GUIUtils.enlargeFont(javaPathLabel);
-
-        JTextField javaPathField = new JTextField();
-        javaPathField.setToolTipText(Messages.get("tooltip.java_path"));
-        javaPathField.setMinimumSize(new Dimension(300, 10));
-        GUIUtils.enlargeFont(javaPathField);
-
-        JLabel jvmStatus = new JLabel("\u2718");
-        jvmStatus.setHorizontalAlignment(JLabel.CENTER);
-        GUIUtils.enlargeFont(jvmStatus);
-
-        JButton detectJvmButton = new JButton(Messages.get("button.detect_java"));
-        GUIUtils.enlargeFont(detectJvmButton);
-        JButton browseJvmButton = new JButton(Messages.get("button.browse_java"));
-        GUIUtils.enlargeFont(browseJvmButton);
-
-        JFileChooser jvmPicker = new JFileChooser(SystemUtils.getUserDir());
-        jvmPicker.setMultiSelectionEnabled(false);
-        jvmPicker.setAcceptAllFileFilterUsed(false);
-        jvmPicker.addChoosableFileFilter(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                return file.getName().equals("javaw.exe") || file.getName().equals("java") || file.isDirectory();
-            }
-            @Override
-            public String getDescription() {
-                return Messages.get("filter.java_executable");
-            }
-        });
-        jvmPicker.setFileHidingEnabled(false);
-        jvmPicker.setFileSelectionMode(JFileChooser.FILES_ONLY);
-
-        JLabel warningLabel = new JLabel(UIManager.getIcon("OptionPane.warningIcon"));
-        warningLabel.setText(Messages.get("warning.need_java25"));
-        warningLabel.setHorizontalAlignment(JLabel.CENTER);
-        GUIUtils.enlargeFont(warningLabel);
-
         JSeparator jSeparator1 = new JSeparator(JSeparator.HORIZONTAL);
-        JSeparator jSeparator2 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator3 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator4 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator5 = new JSeparator(JSeparator.HORIZONTAL);
 
-        Runnable verifyJvm = () -> {
-            if (Initializer.isJavaNewerThan21(javaPathField.getText())) {
-                jvmStatus.setText("\u2714");
-                jvmStatus.setForeground(Color.GREEN);
-                confirmButton.setEnabled(true);
-            } else {
-                jvmStatus.setText("\u2718");
-                jvmStatus.setForeground(Color.RED);
-                confirmButton.setEnabled(false);
-            }
-        };
-
         setInteractable = value -> {
-            confirmButton.setEnabled(value);
+            confirmButton.setEnabled(value && (Config.useLocalPack || isLatestVersionAvailable()));
             if (!value || !useLocalCheckbox.isSelected()) {
                 proxyAddrTextField.setEnabled(value);
                 portSpinner.setEnabled(value);
@@ -153,26 +101,10 @@ public class MMCInstaller {
             mirrorCheckBox.setEnabled(value);
             mmcLocalPackPathField.setEnabled(value && Config.useLocalPack);
             mmcLocalPackBrowserButton.setEnabled(value && Config.useLocalPack);
-            javaPathField.setEnabled(value);
-            detectJvmButton.setEnabled(value);
-            browseJvmButton.setEnabled(value);
         };
 
         confirmButton = new JButton(Messages.get("button.confirm"));
-        confirmButton.setEnabled(false);
-
-        List<JVMInfo> jvms = JavaDetector.getInstalledJVMs();
-        boolean hasJava25 = false;
-        if (!jvms.isEmpty()) {
-            javaPathField.setText(jvms.get(0).getFile().getAbsolutePath());
-            for (JVMInfo jvm : jvms) {
-                if (jvm.getSpecification() >= 25) {
-                    hasJava25 = true;
-                    break;
-                }
-            }
-        }
-        verifyJvm.run();
+        updateConfirmButtonState();
 
         int row = 0;
         mainFrame.add(useLocalCheckbox, "cell 0 " + row + " 2 1, grow, align center");
@@ -187,23 +119,6 @@ public class MMCInstaller {
         row++;
 
         mainFrame.add(jSeparator1, "cell 0 " + row + " 4 1, grow");
-        row++;
-
-        mainFrame.add(javaPathLabel, "cell 0 " + row + ", grow");
-        mainFrame.add(javaPathField, "cell 1 " + row + " 2 1, grow");
-        mainFrame.add(jvmStatus, "cell 3 " + row + ", grow");
-        row++;
-
-        mainFrame.add(detectJvmButton, "cell 0 " + row + " 2 1, grow");
-        mainFrame.add(browseJvmButton, "cell 2 " + row + " 2 1, grow");
-        row++;
-
-        if (!hasJava25) {
-            mainFrame.add(warningLabel, "cell 0 " + row + " 4 1, grow");
-            row++;
-        }
-
-        mainFrame.add(jSeparator2, "cell 0 " + row + " 4 1, grow");
         row++;
 
         JPanel proxyPanel = new JPanel(new MigLayout("", "[][grow][][60px]", "[]"));
@@ -264,7 +179,6 @@ public class MMCInstaller {
                 Config.proxyAddr = proxyAddrTextField.getText();
                 Config.proxyPort = (int) portSpinner.getValue();
                 Config.useMirror = mirrorCheckBox.isSelected();
-                Config.javaPath = javaPathField.getText();
 
                 try {
                     Thread workingThread = new Thread(() -> {
@@ -274,16 +188,21 @@ public class MMCInstaller {
                             File packDir = new File(Relauncher.workingDir, "mmcpack").getAbsoluteFile();
                             File instance = Launch.minecraftHome.getParentFile();
                             Relauncher.LOGGER.info("Instance directory: {}", instance.getAbsolutePath());
-                            File libraries = new File(instance, "libraries");
+                            File packFile = new File(packDir, "mmcpack.zip");
+                            File sourceLibraries = new File(packDir, "libraries");
                             File patches = new File(instance, "patches");
-                            libraries.mkdirs();
                             patches.mkdirs();
                             if (Config.useMirror) {
                                 SwingUtilities.invokeLater(() -> mainStatusLabel.setText(Messages.get("mmc.status.replacing_urls")));
                                 replacePatchUrls(new File(packDir, "patches"));
                             }
                             try {
-                                FileUtils.copyDirectory(new File(packDir, "libraries"), libraries);
+                                if (MMCPackDownloader.containsLibrariesDirectory(packFile)) {
+                                    if (!sourceLibraries.isDirectory()) {
+                                        throw new IOException("MMC pack libraries directory was not extracted: " + sourceLibraries.getAbsolutePath());
+                                    }
+                                    FileUtils.copyDirectory(sourceLibraries, new File(instance, "libraries"));
+                                }
                                 FileUtils.copyDirectory(new File(packDir, "patches"), patches);
                                 FileUtils.copyFile(new File(packDir, "mmc-pack.json"), new File(instance, "mmc-pack.json"));
                             } catch (IOException e) {
@@ -313,33 +232,6 @@ public class MMCInstaller {
                 }
             }
         });
-
-        javaPathField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { verifyJvm.run(); }
-            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { verifyJvm.run(); }
-            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { verifyJvm.run(); }
-        });
-
-        detectJvmButton.addActionListener(actionEvent -> {
-            if (actionEvent.getSource().equals(detectJvmButton)) {
-                JvmDetectorDialog.show(mainFrame, selectedPath -> {
-                    javaPathField.setText(selectedPath);
-                    verifyJvm.run();
-                }, () -> setInteractable.accept(false), () -> setInteractable.accept(true));
-            }
-        });
-
-        browseJvmButton.addActionListener(actionEvent -> {
-            if (actionEvent.getSource().equals(browseJvmButton)) {
-                GUIUtils.setCentral(jvmPicker);
-                int r = jvmPicker.showOpenDialog(mainFrame);
-                if (r == JFileChooser.APPROVE_OPTION) {
-                    javaPathField.setText(jvmPicker.getSelectedFile().getAbsolutePath());
-                    verifyJvm.run();
-                }
-            }
-        });
-
 
         useLocalCheckbox.setToolTipText(Messages.get("tooltip.use_local_pack_mmc"));
         useLocalCheckbox.setSelected(Config.useLocalPack);
@@ -402,10 +294,9 @@ public class MMCInstaller {
         Relauncher.LOGGER.info("Launching GUI");
         mainFrame.validate();
         //mainFrame.setSize(GUIUtils.scaledWidth / 2, GUIUtils.scaledHeight / 4);
-        mainFrame.pack();
-        GUIUtils.setCentral(mainFrame);
         updateVersionStatusBar();
         fetchLatestVersion();
+        packMainFrame();
         mainFrame.setVisible(true);
         mainFrame.setMinimumSize(mainFrame.getSize());
         synchronized (Relauncher.o) {
@@ -488,7 +379,11 @@ public class MMCInstaller {
 
     private static void fetchLatestVersion() {
         versionFetchInProgress = true;
+        latestVersionFetched = null;
+        latestVersionFetchFailed = false;
         latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
+        updateConfirmButtonState();
+        packMainFrame();
         new Thread(() -> {
             try {
                 CleanroomVersionParser.resetVersion();
@@ -498,12 +393,16 @@ public class MMCInstaller {
                 versionFetchInProgress = false;
                 SwingUtilities.invokeLater(() -> {
                     latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + ver);
+                    updateConfirmButtonState();
+                    packMainFrame();
                 });
             } catch (Exception e) {
                 latestVersionFetchFailed = true;
                 versionFetchInProgress = false;
                 SwingUtilities.invokeLater(() -> {
                     latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.version_fetch_failed"));
+                    updateConfirmButtonState();
+                    packMainFrame();
                 });
             }
         }, "MMC Version Fetch Thread").start();
@@ -518,9 +417,13 @@ public class MMCInstaller {
         }
         String installedDisplay = installedVersion != null ? installedVersion : "?";
 
-        if (Config.useLocalPack && !Config.localPackPath.isEmpty()) {
-            String localVer = CleanroomVersionParser.readVersionFromLocalMMCPack(Config.localPackPath);
-            localVersionLabel.setText(Messages.get("label.local_version") + ": " + installedDisplay + " -> " + (localVer != null ? localVer : "?"));
+        if (Config.useLocalPack) {
+            String targetVersion = CleanroomVersionParser.BUNDLED_VERSION;
+            if (!Config.localPackPath.isEmpty()) {
+                String localVer = CleanroomVersionParser.readVersionFromLocalMMCPack(Config.localPackPath);
+                targetVersion = localVer != null ? localVer : "?";
+            }
+            localVersionLabel.setText(Messages.get("label.local_version") + ": " + installedDisplay + " -> " + targetVersion);
         } else {
             localVersionLabel.setText(Messages.get("label.local_version") + ": " + installedDisplay);
             if (latestVersionFetched != null) {
@@ -531,5 +434,20 @@ public class MMCInstaller {
                 latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
             }
         }
+        updateConfirmButtonState();
+        packMainFrame();
+    }
+
+    private static void updateConfirmButtonState() {
+        confirmButton.setEnabled(Config.useLocalPack || isLatestVersionAvailable());
+    }
+
+    private static boolean isLatestVersionAvailable() {
+        return !versionFetchInProgress && !latestVersionFetchFailed && latestVersionFetched != null;
+    }
+
+    private static void packMainFrame() {
+        mainFrame.pack();
+        GUIUtils.setCentral(mainFrame);
     }
 }

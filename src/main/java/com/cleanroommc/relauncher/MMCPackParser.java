@@ -3,6 +3,7 @@ package com.cleanroommc.relauncher;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.launchwrapper.Launch;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.SystemUtils;
 import org.apache.commons.lang3.tuple.Triple;
@@ -20,15 +21,22 @@ public class MMCPackParser {
     public static void parseMMCPack() throws IOException {
         String version = CleanroomVersionParser.getVersion();
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
-        File universalJar = new File(new File(mmcDir, "libraries"), "cleanroom-" + version + "-universal.jar");
+        File pack = new File(mmcDir, "mmcpack.zip");
+        File universalJar = MMCPackDownloader.containsLibrariesDirectory(pack)
+                ? new File(new File(mmcDir, "libraries"), "cleanroom-" + version + "-universal.jar")
+                : null;
         File patches = new File(mmcDir, "patches");
         File vanillaJson = new File(patches, "net.minecraft.json");
         File moddedJson = new File(patches, "net.minecraftforge.json");
         File lwjglJson = new File(patches, "org.lwjgl3.json");
         mmcDir.mkdir();
-        File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
         String cp = "";
-        if (universalJar.exists()) {
+        if (universalJar != null && universalJar.exists()) {
+            File libraryDirectory = Config.libraryPath.isEmpty()
+                    ? new File(Launch.minecraftHome.getParentFile(), "libraries")
+                    : new File(Config.libraryPath);
+            Files.createDirectories(libraryDirectory.toPath());
+            File universalTarget = new File(libraryDirectory, universalJar.getName());
             Files.copy(universalJar.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
             cp = universalTarget.getAbsolutePath() + File.pathSeparator;
         }

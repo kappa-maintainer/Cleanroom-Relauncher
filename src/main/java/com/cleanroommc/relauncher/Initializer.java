@@ -95,7 +95,7 @@ public class Initializer {
         JButton advSetting = new JButton(Messages.get("button.advanced_settings"));
 
         setInteractable = value -> {
-            launchButton.setEnabled(value);
+            launchButton.setEnabled(value && canLaunch());
             pathText.setEnabled(value);
             detectJvmButton.setEnabled(value);
             browserButton.setEnabled(value);
@@ -245,7 +245,7 @@ public class Initializer {
                     }
                 } else {
                     Relauncher.LOGGER.warn("Invalid Java");
-                    launchButton.setEnabled(false);
+                    updateLaunchButtonState();
                     verifyJVM.run();
                 }
             }
@@ -257,13 +257,13 @@ public class Initializer {
                 jvmStatus.setText(valid);
                 jvmStatus.setForeground(Color.GREEN);
 
-                launchButton.setEnabled(true);
+                updateLaunchButtonState();
             } else {
                 verified = false;
                 jvmStatus.setText(invalid);
                 jvmStatus.setForeground(Color.RED);
 
-                launchButton.setEnabled(false);
+                updateLaunchButtonState();
             }
         };
 
@@ -816,6 +816,19 @@ public class Initializer {
         } else {
             launchButton.setText(Messages.get("button.launch_latest"));
         }
+        updateLaunchButtonState();
+    }
+
+    private static void updateLaunchButtonState() {
+        launchButton.setEnabled(canLaunch());
+    }
+
+    private static boolean canLaunch() {
+        return verified && (Config.useLocalPack || isLatestVersionAvailable());
+    }
+
+    private static boolean isLatestVersionAvailable() {
+        return latestVersionFetched != null && !latestVersionFetchFailed;
     }
 
     private static void updateVersionStatusBar() {
@@ -835,7 +848,10 @@ public class Initializer {
     }
 
     private static void fetchLatestVersion() {
+        latestVersionFetched = null;
+        latestVersionFetchFailed = false;
         latestVersionLabel.setText(Messages.get("label.latest_version") + ": " + Messages.get("status.fetching_version"));
+        updateLaunchButtonText();
         new Thread(() -> {
             try {
                 CleanroomVersionParser.resetVersion();

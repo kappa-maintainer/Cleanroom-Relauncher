@@ -1,5 +1,6 @@
 package com.cleanroommc.relauncher;
 
+import net.minecraft.launchwrapper.Launch;
 import org.apache.commons.lang3.tuple.Triple;
 
 import java.io.File;
@@ -21,18 +22,21 @@ public class DownloadEntry {
     public DownloadEntry(Triple<String, String, String> triple) {
         File libDir;
         if (Config.libraryPath.isEmpty()) {
-            libDir = Relauncher.workingDir;
+            libDir = new File(Launch.minecraftHome.getParentFile(), "libraries");
         } else {
             libDir = new File(Config.libraryPath);
         }
-        String[] a = triple.getMiddle().split("/");
-        String fileName = a[a.length - 1];
+        String[] urlParts = triple.getMiddle().split("/");
+        String fileName = urlParts[urlParts.length - 1];
         if (Config.respectLibraryStructure) {
             String[] maven = triple.getLeft().split(":");
-            fileName = maven[0].replace('.', File.separatorChar) + File.separatorChar + maven[2] + File.separatorChar + fileName;
-            if (File.separatorChar == '\\') {
-                fileName = fileName.replace("\\", "\\\\"); // I hate Windows
+            if (maven.length < 3) {
+                throw new IllegalArgumentException("Invalid Maven coordinate: " + triple.getLeft());
             }
+            fileName = maven[0].replace('.', File.separatorChar)
+                    + File.separatorChar + maven[1]
+                    + File.separatorChar + maven[2]
+                    + File.separatorChar + fileName;
         }
         destination = new File(libDir, fileName);
         try {
