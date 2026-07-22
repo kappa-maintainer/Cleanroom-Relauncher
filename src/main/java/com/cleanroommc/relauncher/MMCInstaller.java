@@ -249,13 +249,10 @@ public class MMCInstaller {
         });
 
         mirrorCheckBox.addItemListener(itemEvent -> {
-            if (itemEvent.getStateChange() == ItemEvent.SELECTED) {
-                Config.useMirror = true;
-                if (versionFetchInProgress || latestVersionFetchFailed) {
-                    fetchLatestVersion();
-                }
-            } else {
-                Config.useMirror = false;
+            boolean selected = itemEvent.getStateChange() == ItemEvent.SELECTED;
+            if (Config.useMirror != selected) {
+                Config.useMirror = selected;
+                fetchLatestVersion();
             }
         });
 

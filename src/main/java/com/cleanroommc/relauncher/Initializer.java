@@ -642,7 +642,7 @@ public class Initializer {
                 Config.maxRetry = (int) maxRetrySpinner.getValue();
                 Config.respectLibraryStructure = groupNameInPathCheckbox.isSelected();
                 Config.alwaysShowConfigGUI = alwaysShowConfigCheckbox.isSelected();
-                if (!wasMirror && Config.useMirror && latestVersionFetchFailed) {
+                if (wasMirror != Config.useMirror) {
                     fetchLatestVersion();
                 }
             }
