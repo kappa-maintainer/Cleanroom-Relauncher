@@ -1,5 +1,11 @@
 package com.cleanroommc.relauncher;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.miginfocom.swing.MigLayout;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.ExitWrapper;
@@ -16,8 +22,14 @@ import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class MMCInstaller {
@@ -166,6 +178,7 @@ public class MMCInstaller {
                             mainStatusLabel.setText(Messages.get("status.installing"));
                             MMCPackDownloader.downloadAndExtract();
                             File packDir = new File(Relauncher.workingDir, "mmcpack").getAbsoluteFile();
+                            replacePatchUrls(new File(packDir, "patches"));
                             File instance = Launch.minecraftHome.getParentFile();
                             Relauncher.LOGGER.info("Instance directory: {}", instance.getAbsolutePath());
                             File packFile = new File(packDir, "mmcpack.zip");
@@ -272,6 +285,62 @@ public class MMCInstaller {
             }
         }
 
+    }
+
+    /**
+     * Rewrites library URLs in extracted MMC patch metadata to the automatic
+     * mirror endpoint.  Patch JSON is consumed after installation by the
+     * launcher, so this must run for every pack now that mirror selection is
+     * automatic and no longer exposed as a configuration option.
+     */
+    private static void replacePatchUrls(File patchesDir) {
+        File[] jsonFiles = patchesDir.listFiles((dir, name) -> name.endsWith(".json"));
+        if (jsonFiles == null) {
+            String message = "Unable to read MMC patches directory: " + patchesDir.getAbsolutePath();
+            Relauncher.LOGGER.error(message);
+            throw new IllegalStateException(message);
+        }
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        for (File jsonFile : jsonFiles) {
+            try {
+                String content = new String(Files.readAllBytes(jsonFile.toPath()), StandardCharsets.UTF_8);
+                JsonObject root = new JsonParser().parse(content).getAsJsonObject();
+                JsonArray libraries = root.getAsJsonArray("libraries");
+                if (libraries != null) {
+                    for (JsonElement lib : libraries) {
+                        JsonObject libObj = lib.getAsJsonObject();
+                        JsonObject downloads = libObj.getAsJsonObject("downloads");
+                        if (downloads != null) {
+                            replaceUrlsInDownloads(downloads);
+                        }
+                    }
+                }
+                try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(
+                        new FileOutputStream(jsonFile), StandardCharsets.UTF_8))) {
+                    writer.print(gson.toJson(root));
+                }
+                Relauncher.LOGGER.info("Replaced URLs in {}", jsonFile.getName());
+            } catch (IOException e) {
+                Relauncher.LOGGER.error("Failed to replace URLs in {}", jsonFile.getName(), e);
+                throw new IllegalStateException("Failed to replace URLs in " + jsonFile.getAbsolutePath(), e);
+            }
+        }
+    }
+
+    private static void replaceUrlsInDownloads(JsonObject downloads) {
+        JsonObject artifact = downloads.getAsJsonObject("artifact");
+        if (artifact != null && artifact.has("url")) {
+            artifact.addProperty("url", DownloadEntry.applyMirrorUrl(artifact.get("url").getAsString()));
+        }
+        JsonObject classifiers = downloads.getAsJsonObject("classifiers");
+        if (classifiers != null) {
+            for (Map.Entry<String, JsonElement> entry : classifiers.entrySet()) {
+                JsonObject classifier = entry.getValue().getAsJsonObject();
+                if (classifier.has("url")) {
+                    classifier.addProperty("url", DownloadEntry.applyMirrorUrl(classifier.get("url").getAsString()));
+                }
+            }
+        }
     }
 
     private static JDialog finishedDialog() {
