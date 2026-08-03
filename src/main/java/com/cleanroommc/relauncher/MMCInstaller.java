@@ -1,11 +1,5 @@
 package com.cleanroommc.relauncher;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import net.miginfocom.swing.MigLayout;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.ExitWrapper;
@@ -14,21 +8,16 @@ import org.apache.commons.lang3.SystemUtils;
 
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 public class MMCInstaller {
@@ -81,11 +70,6 @@ public class MMCInstaller {
             }
         });
 
-        JCheckBox mirrorCheckBox = new JCheckBox(Messages.get("checkbox.chinese_mirror"));
-        mirrorCheckBox.setSelected(Config.useMirror);
-        mirrorCheckBox.setToolTipText(Messages.get("tooltip.chinese_mirror"));
-        GUIUtils.enlargeFont(mirrorCheckBox);
-
         JSeparator jSeparator1 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator3 = new JSeparator(JSeparator.HORIZONTAL);
         JSeparator jSeparator4 = new JSeparator(JSeparator.HORIZONTAL);
@@ -98,7 +82,6 @@ public class MMCInstaller {
                 portSpinner.setEnabled(value);
             }
             useLocalCheckbox.setEnabled(value);
-            mirrorCheckBox.setEnabled(value);
             mmcLocalPackPathField.setEnabled(value && Config.useLocalPack);
             mmcLocalPackBrowserButton.setEnabled(value && Config.useLocalPack);
         };
@@ -110,8 +93,6 @@ public class MMCInstaller {
         mainFrame.add(useLocalCheckbox, "cell 0 " + row + " 2 1, grow, align center");
         GUIUtils.enlargeFont(useLocalCheckbox);
         useLocalCheckbox.setHorizontalAlignment(JCheckBox.CENTER);
-        mainFrame.add(mirrorCheckBox, "cell 2 " + row + " 2 1, grow, align center");
-        mirrorCheckBox.setHorizontalAlignment(JCheckBox.CENTER);
         row++;
 
         mainFrame.add(mmcLocalPackPathField, "cell 0 " + row + " 3 1, grow");
@@ -178,7 +159,6 @@ public class MMCInstaller {
                 Config.localPackPath = mmcLocalPackPathField.getText();
                 Config.proxyAddr = proxyAddrTextField.getText();
                 Config.proxyPort = (int) portSpinner.getValue();
-                Config.useMirror = mirrorCheckBox.isSelected();
 
                 try {
                     Thread workingThread = new Thread(() -> {
@@ -192,10 +172,6 @@ public class MMCInstaller {
                             File sourceLibraries = new File(packDir, "libraries");
                             File patches = new File(instance, "patches");
                             patches.mkdirs();
-                            if (Config.useMirror) {
-                                SwingUtilities.invokeLater(() -> mainStatusLabel.setText(Messages.get("mmc.status.replacing_urls")));
-                                replacePatchUrls(new File(packDir, "patches"));
-                            }
                             try {
                                 if (MMCPackDownloader.containsLibrariesDirectory(packFile)) {
                                     if (!sourceLibraries.isDirectory()) {
@@ -248,14 +224,6 @@ public class MMCInstaller {
             updateVersionStatusBar();
         });
 
-        mirrorCheckBox.addItemListener(itemEvent -> {
-            boolean selected = itemEvent.getStateChange() == ItemEvent.SELECTED;
-            if (Config.useMirror != selected) {
-                Config.useMirror = selected;
-                fetchLatestVersion();
-            }
-        });
-
         mmcLocalPackBrowserButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(mmcLocalPackBrowserButton)) {
                 GUIUtils.setCentral(mmcPackPicker);
@@ -267,10 +235,10 @@ public class MMCInstaller {
             }
         });
 
-        mmcLocalPackPathField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { onChange(); }
-            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { onChange(); }
-            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { onChange(); }
+        mmcLocalPackPathField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override public void insertUpdate(DocumentEvent e) { onChange(); }
+            @Override public void removeUpdate(DocumentEvent e) { onChange(); }
+            @Override public void changedUpdate(DocumentEvent e) { onChange(); }
             private void onChange() {
                 Config.localPackPath = mmcLocalPackPathField.getText();
                 updateVersionStatusBar();
@@ -306,50 +274,6 @@ public class MMCInstaller {
 
     }
 
-    private static void replacePatchUrls(File patchesDir) {
-        File[] jsonFiles = patchesDir.listFiles((dir, name) -> name.endsWith(".json"));
-        if (jsonFiles == null) return;
-        Gson gson = new GsonBuilder().setPrettyPrinting().create();
-        for (File jsonFile : jsonFiles) {
-            try {
-                String content = new String(Files.readAllBytes(jsonFile.toPath()), StandardCharsets.UTF_8);
-                JsonObject root = new JsonParser().parse(content).getAsJsonObject();
-                JsonArray libraries = root.getAsJsonArray("libraries");
-                if (libraries != null) {
-                    for (JsonElement lib : libraries) {
-                        JsonObject libObj = lib.getAsJsonObject();
-                        JsonObject downloads = libObj.getAsJsonObject("downloads");
-                        if (downloads != null) {
-                            replaceUrlsInDownloads(downloads);
-                        }
-                    }
-                }
-                try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-                        new FileOutputStream(jsonFile), StandardCharsets.UTF_8))) {
-                    writer.print(gson.toJson(root));
-                }
-                Relauncher.LOGGER.info("Replaced URLs in {}", jsonFile.getName());
-            } catch (IOException e) {
-                Relauncher.LOGGER.error("Failed to replace URLs in {}", jsonFile.getName(), e);
-            }
-        }
-    }
-
-    private static void replaceUrlsInDownloads(JsonObject downloads) {
-        JsonObject artifact = downloads.getAsJsonObject("artifact");
-        if (artifact != null && artifact.has("url")) {
-            artifact.addProperty("url", DownloadEntry.applyMirrorUrl(artifact.get("url").getAsString()));
-        }
-        JsonObject classifiers = downloads.getAsJsonObject("classifiers");
-        if (classifiers != null) {
-            for (Map.Entry<String, JsonElement> entry : classifiers.entrySet()) {
-                JsonObject classifier = entry.getValue().getAsJsonObject();
-                if (classifier.has("url")) {
-                    classifier.addProperty("url", DownloadEntry.applyMirrorUrl(classifier.get("url").getAsString()));
-                }
-            }
-        }
-    }
     private static JDialog finishedDialog() {
         JDialog dialog = new JDialog();
         String message = Messages.get("mmc.complete_message");

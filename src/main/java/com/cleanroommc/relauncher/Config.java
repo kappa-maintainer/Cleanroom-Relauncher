@@ -16,7 +16,6 @@ public class Config {
     public static String libraryPath;
     public static int maxRetry;
     public static int maxDownloadSession;
-    public static boolean useMirror;
     public static String localPackPath;
     public static boolean showConfigGUI;
     public static boolean alwaysShowConfigGUI;
@@ -43,12 +42,16 @@ public class Config {
         respectLibraryStructure = forgeConfig.getBoolean("Place in Group Name", categoryGeneral, true, Messages.get("config.respect_library_structure"));
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, "", Messages.get("config.library_path"));
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, 5, 1, 65535, Messages.get("config.max_retry"));
-        maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, 5, 1, 65535, Messages.get("config.max_download_session"));
-        useMirror = forgeConfig.getBoolean("Use Mirror", categoryGeneral, false, Messages.get("config.use_mirror"));
+        maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, 24, 1, 65535, Messages.get("config.max_download_session"));
         alwaysShowConfigGUI = forgeConfig.getBoolean("Always Show Config", categoryGeneral, false, Messages.get("config.always_show_config"));
         localPackPath = forgeConfig.getString("Local MMC Pack Path", categoryGeneral, "", Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString("Class Path", categoryGeneral, "", Messages.get("config.class_path"));
         disableUpdateToast = forgeConfig.getBoolean("Disable Update Toast", categoryGeneral, false, Messages.get("config.disable_update_toast"));
+
+        if (forgeConfig.getCategory(categoryGeneral).containsKey("Use Mirror")) {
+            forgeConfig.getCategory(categoryGeneral).remove("Use Mirror");
+            forgeConfig.save();
+        }
         
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();
@@ -68,7 +71,6 @@ public class Config {
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, libraryPath, Messages.get("config.library_path"));
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, maxRetry, 1, 65535, Messages.get("config.max_retry"));
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, maxDownloadSession, 1, 65535, Messages.get("config.max_download_session"));
-        useMirror = forgeConfig.getBoolean("Use Mirror", categoryGeneral, useMirror, Messages.get("config.use_mirror"));
         alwaysShowConfigGUI = forgeConfig.getBoolean("Always Show Config", categoryGeneral, alwaysShowConfigGUI, Messages.get("config.always_show_config"));
         localPackPath = forgeConfig.getString("Local MMC Pack Path", categoryGeneral, localPackPath, Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString("Class Path", categoryGeneral, classPath, Messages.get("config.class_path"));

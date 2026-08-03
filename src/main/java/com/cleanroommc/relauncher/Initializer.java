@@ -4,21 +4,18 @@ import net.miginfocom.swing.MigLayout;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
 
-import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
 import javax.swing.JSpinner;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
@@ -40,6 +37,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import javax.swing.Timer;
@@ -225,10 +223,18 @@ public class Initializer {
 
                     try {
                         Thread workingThread = new Thread(() -> {
+                            long workflowStarted = System.nanoTime();
+                            Relauncher.LOGGER.info("Relauncher download workflow started");
                             try {
                                 MMCPackDownloader.downloadAndExtract();
+                                Relauncher.LOGGER.info("Relauncher MMC pack stage completed in {} ms",
+                                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - workflowStarted));
                                 MMCPackParser.parseMMCPack();
+                                Relauncher.LOGGER.info("Relauncher download workflow completed in {} ms",
+                                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - workflowStarted));
                             } catch (IOException e) {
+                                Relauncher.LOGGER.error("Relauncher download workflow failed after {} ms",
+                                        TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - workflowStarted), e);
                                 throw new RuntimeException(e);
                             }
                             synchronized (Relauncher.o) {
@@ -405,10 +411,13 @@ public class Initializer {
         mainStatusLabel.setText(Messages.get("status.idle"));
 
         cycleTimer = new Timer(1500, e -> {
-            String[] files = activeDownloads.toArray(new String[0]);
+            String[] files = snapshotActiveDownloads();
             if (files.length > 0) {
                 int idx = cycleIdx.getAndUpdate(i -> (i + 1) % files.length);
-                SwingUtilities.invokeLater(() -> mainStatusLabel.setText(Messages.get("status.downloading", mainProgressbar.getValue(), mainProgressbar.getMaximum(), files[idx])));
+                String fileName = files[Math.floorMod(idx, files.length)];
+                SwingUtilities.invokeLater(() -> mainStatusLabel.setText(Messages.get("status.downloading", mainProgressbar.getValue(), mainProgressbar.getMaximum(), fileName)));
+            } else {
+                cycleIdx.set(0);
             }
         });
         cycleTimer.start();
@@ -547,8 +556,6 @@ public class Initializer {
         JTextField proxyAddrTextField = new JTextField();
         proxyAddrTextField.setText(Config.proxyAddr);
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
-        JCheckBox chineseModeCheckbox = new JCheckBox(Messages.get("checkbox.chinese_mirror"));
-        chineseModeCheckbox.setSelected(Config.useMirror);
         JCheckBox alwaysShowConfigCheckbox = new JCheckBox(Messages.get("checkbox.always_show_config"));
         alwaysShowConfigCheckbox.setSelected(Config.alwaysShowConfigGUI);
         JLabel maxRetryLabel = new JLabel(Messages.get("label.max_retry"));
@@ -571,9 +578,7 @@ public class Initializer {
         
         advSetting.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 2 4 1, grow");
 
-        advSetting.add(chineseModeCheckbox, "cell 0 3 1 1, grow");
-        GUIUtils.enlargeFont(chineseModeCheckbox);
-        advSetting.add(alwaysShowConfigCheckbox, "cell 2 3 2 1, grow");
+        advSetting.add(alwaysShowConfigCheckbox, "cell 0 3 4 1, grow");
         GUIUtils.enlargeFont(alwaysShowConfigCheckbox);
         
         advSetting.add(proxyLabel, "cell 0 4, grow");
@@ -603,8 +608,6 @@ public class Initializer {
         
         groupNameInPathCheckbox.setToolTipText(Messages.get("tooltip.place_libs_in_group"));
         
-        chineseModeCheckbox.setToolTipText(Messages.get("tooltip.chinese_mirror"));
-
         alwaysShowConfigCheckbox.setToolTipText(Messages.get("tooltip.always_show_config"));
         libraryBrowserButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(libraryBrowserButton)) {
@@ -634,17 +637,12 @@ public class Initializer {
             if (actionEvent.getSource().equals(confirm)) {
                 advSetting.setVisible(false);
                 setGUIInteractable(true);
-                boolean wasMirror = Config.useMirror;
-                Config.useMirror = chineseModeCheckbox.isSelected();
                 Config.proxyPort = (int) portSpinner.getValue();
                 Config.proxyAddr = proxyAddrTextField.getText();
                 Config.maxDownloadSession = (int) maxSessionSpinner.getValue();
                 Config.maxRetry = (int) maxRetrySpinner.getValue();
                 Config.respectLibraryStructure = groupNameInPathCheckbox.isSelected();
                 Config.alwaysShowConfigGUI = alwaysShowConfigCheckbox.isSelected();
-                if (wasMirror != Config.useMirror) {
-                    fetchLatestVersion();
-                }
             }
         });
 
@@ -782,11 +780,18 @@ public class Initializer {
     }
 
     private static void updateStatusLabel() {
-        String[] files = activeDownloads.toArray(new String[0]);
+        String[] files = snapshotActiveDownloads();
         if (files.length > 0) {
-            mainStatusLabel.setText(Messages.get("status.downloading", mainProgressbar.getValue(), mainProgressbar.getMaximum(), files[cycleIdx.get() % files.length]));
+            mainStatusLabel.setText(Messages.get("status.downloading", mainProgressbar.getValue(), mainProgressbar.getMaximum(),
+                    files[Math.floorMod(cycleIdx.get(), files.length)]));
         } else {
             mainStatusLabel.setText(Messages.get("status.downloading_count", mainProgressbar.getValue(), mainProgressbar.getMaximum()));
+        }
+    }
+
+    private static String[] snapshotActiveDownloads() {
+        synchronized (activeDownloads) {
+            return activeDownloads.toArray(new String[activeDownloads.size()]);
         }
     }
     

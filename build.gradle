@@ -138,6 +138,9 @@ sourceSets {
             }
         }
     }
+    test {
+        compileClasspath += sourceSets.main.compileClasspath
+    }
 }
 
 if (!propertyBool('enable_shadow')) {
@@ -205,6 +208,7 @@ compileTestJava {
 
 test {
     useJUnitPlatform()
+    classpath += sourceSets.main.compileClasspath
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(8)
     })
