@@ -15,10 +15,13 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 public class MMCPackParser {
     private static final String osArch = System.getProperty("os.arch");
     public static void parseMMCPack() throws IOException {
+        long parserStarted = System.nanoTime();
+        Relauncher.LOGGER.info("MMC pack library parsing started");
         String version = CleanroomVersionParser.getVersion();
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
         File pack = new File(mmcDir, "mmcpack.zip");
@@ -47,6 +50,8 @@ public class MMCPackParser {
         List<Triple<String, String, String>> result = new ArrayList<>(parseAndAddVanillaLibraries(vanilla));
         result.addAll(parseAndAddModdedLibraries(modded));
         result.addAll(parseAndAddLwjglLibraries(lwjgl));
+        Relauncher.LOGGER.info("MMC pack library metadata produced {} download entries in {} ms",
+                result.size(), elapsedMillis(parserStarted));
 
         StringBuilder builder = new StringBuilder();
 
@@ -60,12 +65,20 @@ public class MMCPackParser {
             builder.append(entry.getDestination().getAbsolutePath()).append(File.pathSeparator);
         });
         
+        long libraryDownloadStarted = System.nanoTime();
         Downloader.downloadAll(entries);
+        Relauncher.LOGGER.info("MMC pack library download batch completed in {} ms",
+                elapsedMillis(libraryDownloadStarted));
 
         cp += builder.toString();
         
         Config.classPath = cp;
+        Relauncher.LOGGER.info("MMC pack library parsing completed in {} ms", elapsedMillis(parserStarted));
 
+    }
+
+    private static long elapsedMillis(long started) {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
     }
 
     private static List<Triple<String, String, String>> parseAndAddModdedLibraries(JsonObject o) {

@@ -6,6 +6,9 @@ import org.apache.commons.lang3.tuple.Triple;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class DownloadEntry {
@@ -40,11 +43,7 @@ public class DownloadEntry {
         }
         destination = new File(libDir, fileName);
         try {
-            String urlString = triple.getMiddle();
-            if (Config.useMirror) {
-                urlString = applyMirrorUrl(urlString);
-            }
-            url = new URL(urlString);
+            url = new URL(triple.getMiddle());
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
@@ -62,11 +61,42 @@ public class DownloadEntry {
     public String getSha1() {
         return sha1;
     }
-    
+
+    /** Returns the normalized target path used by the batch scheduler for de-duplication and locking. */
+    String getNormalizedDestinationPath() {
+        try {
+            return destination.getCanonicalFile().toPath().normalize().toString();
+        } catch (IOException e) {
+            throw new IllegalStateException("Unable to normalize download destination " + destination, e);
+        }
+    }
+
+    /** Returns the primary URL declared by the download metadata. */
+    String getRequestUrl() {
+        return url.toExternalForm();
+    }
+
+    /** Returns the primary URL and its automatic mirror candidate, without duplicates. */
+    List<String> getCandidateUrls() {
+        return candidateUrls(getRequestUrl());
+    }
+
+    static List<String> candidateUrls(String primaryUrl) {
+        List<String> result = new ArrayList<>(2);
+        result.add(primaryUrl);
+        String mirror = applyMirrorUrl(primaryUrl);
+        if (!mirror.equals(primaryUrl)) {
+            result.add(mirror);
+        }
+        return result;
+    }
+
+    /** Records one failed attempt for callers that still expose the legacy retry counter. */
     public int failed() {
         return attempts.addAndGet(1);
     }
 
+    /** Returns the legacy per-entry failed-attempt count. The downloader keeps its own batch-local count. */
     public int getAttempts() {
         return attempts.get();
     }

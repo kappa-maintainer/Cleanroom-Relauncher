@@ -1,7 +1,5 @@
 package com.cleanroommc.relauncher;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraftforge.fml.common.versioning.ComparableVersion;
@@ -19,11 +17,14 @@ import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 public class MMCPackDownloader {
     public static void downloadAndExtract () throws IOException {
+        long workflowStarted = System.nanoTime();
+        Relauncher.LOGGER.info("MMC pack workflow started");
         File mmcDir = new File(Relauncher.workingDir, "mmcpack");
         ensureDirectory(mmcDir, "MMC pack working directory");
         File pack = new File(mmcDir, "mmcpack.zip");
@@ -41,14 +42,13 @@ public class MMCPackDownloader {
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                 Initializer.setStatusText(Messages.get("status.downloading_mmc_pack", version));
                 String zipUrl = "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + ".zip";
-                if (Config.useMirror) {
-                    zipUrl = DownloadEntry.applyMirrorUrl(zipUrl);
-                }
                 String sha1 = fetchSha1(zipUrl + ".sha1");
                 List<DownloadEntry> list = new ArrayList<>(1);
                 list.add(new DownloadEntry(new URL(zipUrl), pack, sha1));
                 try {
+                    long downloadStarted = System.nanoTime();
                     Downloader.downloadAll(list);
+                    Relauncher.LOGGER.info("MMC pack download completed in {} ms", elapsedMillis(downloadStarted));
                 } catch (RuntimeException e) {
                     Relauncher.LOGGER.error("MMC pack download failed: {}", e.getMessage());
                     throw new IOException(Messages.get("status.mmc_download_failed", Config.maxRetry), e);
@@ -74,7 +74,9 @@ public class MMCPackDownloader {
             }
         }
 
+        long extractionStarted = System.nanoTime();
         File universalJar = extractPackContent(mmcDir, pack);
+        Relauncher.LOGGER.info("MMC pack extraction completed in {} ms", elapsedMillis(extractionStarted));
         File extractedPatches = new File(mmcDir, "patches");
         if (!extractedPatches.exists()) {
             Relauncher.LOGGER.warn("MMC pack extraction produced incomplete result");
@@ -89,7 +91,9 @@ public class MMCPackDownloader {
             }
             ensureDirectory(mmcDir, "MMC pack working directory");
             extractBundledZip(pack);
+            extractionStarted = System.nanoTime();
             universalJar = extractPackContent(mmcDir, pack);
+            Relauncher.LOGGER.info("Bundled MMC pack extraction completed in {} ms", elapsedMillis(extractionStarted));
             if (!extractedPatches.exists()) {
                 throw new IOException("MMC pack extraction failed even with bundled pack");
             }
@@ -99,7 +103,12 @@ public class MMCPackDownloader {
             File universalTarget = new File(Relauncher.workingDir, universalJar.getName());
             Files.copy(universalJar.toPath(), universalTarget.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
+        Relauncher.LOGGER.info("MMC pack workflow completed in {} ms", elapsedMillis(workflowStarted));
 
+    }
+
+    private static long elapsedMillis(long started) {
+        return TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started);
     }
 
     private static File extractPackContent(File mmcDir, File pack) throws IOException {
