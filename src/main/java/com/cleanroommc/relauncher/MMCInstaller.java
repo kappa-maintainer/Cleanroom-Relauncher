@@ -198,7 +198,6 @@ public class MMCInstaller {
                                 throw new RuntimeException("Failed to copy MMC pack files", e);
                             }
                             Relauncher.LOGGER.info("Install finished");
-                            Config.showConfigGUI = false;
                             Config.save();
                             JDialog dialog = finishedDialog();
                             GUIUtils.setCentral(dialog);

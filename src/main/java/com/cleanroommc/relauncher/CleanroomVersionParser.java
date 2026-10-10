@@ -22,38 +22,43 @@ import java.util.zip.ZipFile;
 public class CleanroomVersionParser {
     public static final String BUNDLED_VERSION = "0.6.2-alpha";
     private static String version = "";
+    private static CleanroomApi.Release release = null;
 
     public static String getVersion() throws IOException {
         if (!CleanroomVersionParser.version.isEmpty()) {
             return CleanroomVersionParser.version;
         }
-        Relauncher.LOGGER.info("Parsing latest Cleanroom versions");
+        Relauncher.LOGGER.info("Querying the latest Cleanroom version");
         Initializer.setStatusText(Messages.get("status.parsing_versions"));
 
-        Relauncher.LOGGER.info("Downloading metadata");
-        String xmlContent = Downloader.downloadString("https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/maven-metadata.xml");
-        String version = BUNDLED_VERSION;
-        for (String line : xmlContent.split("\n")) {
-            int startIdx = line.indexOf("<version>");
-            if (startIdx >= 0) {
-                String temp = line.substring(startIdx + 9, line.indexOf("</version>"));
-                if (!temp.contains("build")) {
-                    version = temp;
-                }
-            }
-        }
-        Relauncher.LOGGER.info("Found version {}", version);
-        Initializer.setStatusText(Messages.get("status.found_version", version));
-        CleanroomVersionParser.version = version;
-        return version;
+        CleanroomApi.Release fetched = CleanroomApi.fetch();
+        String resolved = fetched.getVersion();
+        Relauncher.LOGGER.info("Found version {}", resolved);
+        Initializer.setStatusText(Messages.get("status.found_version", resolved));
+        CleanroomVersionParser.release = fetched;
+        CleanroomVersionParser.version = resolved;
+        return resolved;
     }
-    
+
+    /**
+     * MMC pack zip URL for the given version. Prefers the URL reported by the download API and
+     * falls back to the predictable maven layout for versions resolved without an API response.
+     */
+    public static String getPackUrl(String version) {
+        CleanroomApi.Release fetched = CleanroomVersionParser.release;
+        if (fetched != null && fetched.getMavenMmc() != null) {
+            return fetched.getMavenMmc();
+        }
+        return "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + ".zip";
+    }
+
     public static void setVersion(String version) {
         CleanroomVersionParser.version = version;
     }
 
     public static void resetVersion() {
         CleanroomVersionParser.version = "";
+        CleanroomVersionParser.release = null;
     }
 
     public static String readCachedVersion() {
@@ -81,13 +86,13 @@ public class CleanroomVersionParser {
                 JsonObject root = new JsonParser().parse(IOUtils.toString(in, StandardCharsets.UTF_8)).getAsJsonObject();
                 return readVersionFromJsonObject(root);
             }
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             Relauncher.LOGGER.warn("Failed to read version from local MMC pack {}", path, e);
             return null;
         }
     }
 
-    static String readVersionFromMMCPackJson(File jsonFile) {
+    public static String readVersionFromMMCPackJson(File jsonFile) {
         try (FileInputStream fis = new FileInputStream(jsonFile)) {
             JsonObject root = new JsonParser().parse(IOUtils.toString(fis, StandardCharsets.UTF_8)).getAsJsonObject();
             return readVersionFromJsonObject(root);

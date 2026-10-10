@@ -4,9 +4,12 @@ import net.miginfocom.swing.MigLayout;
 import net.minecraftforge.fml.ExitWrapper;
 import org.apache.commons.lang3.SystemUtils;
 
+import javax.swing.DefaultListCellRenderer;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JDialog;
+import javax.swing.JList;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -24,6 +27,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
@@ -556,8 +560,11 @@ public class Initializer {
         JTextField proxyAddrTextField = new JTextField();
         proxyAddrTextField.setText(Config.proxyAddr);
         JSpinner portSpinner = new JSpinner(new SpinnerNumberModel(Config.proxyPort, 0, 65535, 1));
-        JCheckBox alwaysShowConfigCheckbox = new JCheckBox(Messages.get("checkbox.always_show_config"));
-        alwaysShowConfigCheckbox.setSelected(Config.alwaysShowConfigGUI);
+        JLabel showConfigModeLabel = new JLabel(Messages.get("label.show_config_mode"));
+        showConfigModeLabel.setHorizontalAlignment(JLabel.CENTER);
+        JComboBox<ShowConfigMode> showConfigModeCombo = new JComboBox<>(ShowConfigMode.values());
+        showConfigModeCombo.setSelectedItem(Config.showConfigMode);
+        showConfigModeCombo.setRenderer(new ShowConfigModeRenderer());
         JLabel maxRetryLabel = new JLabel(Messages.get("label.max_retry"));
         maxRetryLabel.setHorizontalAlignment(JLabel.CENTER);
         JSpinner maxRetrySpinner = new JSpinner(new SpinnerNumberModel(Config.maxRetry, 1, 65535, 1));
@@ -578,8 +585,10 @@ public class Initializer {
         
         advSetting.add(new JSeparator(JSeparator.HORIZONTAL), "cell 0 2 4 1, grow");
 
-        advSetting.add(alwaysShowConfigCheckbox, "cell 0 3 4 1, grow");
-        GUIUtils.enlargeFont(alwaysShowConfigCheckbox);
+        advSetting.add(showConfigModeLabel, "cell 0 3, grow");
+        GUIUtils.enlargeFont(showConfigModeLabel);
+        advSetting.add(showConfigModeCombo, "cell 1 3 3 1, grow");
+        GUIUtils.enlargeFont(showConfigModeCombo);
         
         advSetting.add(proxyLabel, "cell 0 4, grow");
         GUIUtils.enlargeFont(proxyLabel);
@@ -608,7 +617,7 @@ public class Initializer {
         
         groupNameInPathCheckbox.setToolTipText(Messages.get("tooltip.place_libs_in_group"));
         
-        alwaysShowConfigCheckbox.setToolTipText(Messages.get("tooltip.always_show_config"));
+        showConfigModeCombo.setToolTipText(Messages.get("tooltip.show_config_mode"));
         libraryBrowserButton.addActionListener(actionEvent -> {
             if (actionEvent.getSource().equals(libraryBrowserButton)) {
                 GUIUtils.setCentral(libraryPicker);
@@ -642,7 +651,10 @@ public class Initializer {
                 Config.maxDownloadSession = (int) maxSessionSpinner.getValue();
                 Config.maxRetry = (int) maxRetrySpinner.getValue();
                 Config.respectLibraryStructure = groupNameInPathCheckbox.isSelected();
-                Config.alwaysShowConfigGUI = alwaysShowConfigCheckbox.isSelected();
+                Object selectedMode = showConfigModeCombo.getSelectedItem();
+                if (selectedMode instanceof ShowConfigMode) {
+                    Config.showConfigMode = (ShowConfigMode) selectedMode;
+                }
             }
         });
 
@@ -654,6 +666,18 @@ public class Initializer {
         setGUIInteractable(false);
         advSetting.setVisible(true);
         advSetting.requestFocus();
+    }
+
+    /** Shows the localized label of a {@link ShowConfigMode} instead of its enum constant name. */
+    private static class ShowConfigModeRenderer extends DefaultListCellRenderer {
+        @Override
+        public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+            super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+            if (value instanceof ShowConfigMode) {
+                setText(((ShowConfigMode) value).getDisplayName());
+            }
+            return this;
+        }
     }
     
     private static boolean java25NotExist() {

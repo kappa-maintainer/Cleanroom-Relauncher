@@ -2,6 +2,7 @@ package com.cleanroommc.relauncher;
 
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.common.config.Configuration;
+import net.minecraftforge.common.config.Property;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
@@ -17,8 +18,7 @@ public class Config {
     public static int maxRetry;
     public static int maxDownloadSession;
     public static String localPackPath;
-    public static boolean showConfigGUI;
-    public static boolean alwaysShowConfigGUI;
+    public static ShowConfigMode showConfigMode;
     public static String classPath;
     public static boolean disableUpdateToast;
 
@@ -28,12 +28,50 @@ public class Config {
     private static Configuration forgeConfig = new Configuration(configFile);
     private static final String categoryGeneral = "General";
 
+    /**
+     * Keys from older releases that no longer exist. They are dropped on load so their stale values
+     * cannot be mistaken for the current schema.
+     */
+    private static final String[] OBSOLETE_KEYS = { "Always Show Config", "Use Mirror" };
+
+    private static void removeObsoleteKeys() {
+        boolean changed = false;
+        for (String key : OBSOLETE_KEYS) {
+            if (forgeConfig.getCategory(categoryGeneral).containsKey(key)) {
+                forgeConfig.getCategory(categoryGeneral).remove(key);
+                changed = true;
+            }
+        }
+        if (changed) {
+            forgeConfig.save();
+        }
+    }
+
+    /**
+     * Drops the legacy boolean {@code Show Config} value so the enum default applies. The key itself
+     * is reused by the mode, so it can only be removed while it still holds a boolean.
+     */
+    private static void migrateShowConfigKey() {
+        Property legacy = forgeConfig.getCategory(categoryGeneral).get("Show Config");
+        if (legacy == null) {
+            return;
+        }
+        String value = legacy.getString();
+        if ("true".equalsIgnoreCase(value) || "false".equalsIgnoreCase(value)) {
+            Relauncher.LOGGER.info("Dropping legacy boolean Show Config={} in favour of {}", value, ShowConfigMode.WHEN_OUTDATED);
+            forgeConfig.getCategory(categoryGeneral).remove("Show Config");
+            forgeConfig.save();
+        }
+    }
+
     static Configuration getForgeConfig() {
         return forgeConfig;
     }
 
     public static void syncConfig() {
-        showConfigGUI = forgeConfig.getBoolean("Show Config", categoryGeneral, true, Messages.get("config.show_config_gui"));
+        removeObsoleteKeys();
+        migrateShowConfigKey();
+        showConfigMode = ShowConfigMode.parse(forgeConfig.getString("Show Config", categoryGeneral, ShowConfigMode.WHEN_OUTDATED.name(), Messages.get("config.show_config"), ShowConfigMode.names()));
         useLocalPack = forgeConfig.getBoolean("Use Local MMC Pack", categoryGeneral, false, Messages.get("config.use_local_pack"));
         proxyAddr = forgeConfig.getString("Proxy Address", categoryGeneral, "", Messages.get("config.proxy_addr"));
         proxyPort = forgeConfig.getInt("Proxy Port", categoryGeneral, 0, 0, 65535, Messages.get("config.proxy_port"));
@@ -43,16 +81,10 @@ public class Config {
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, "", Messages.get("config.library_path"));
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, 5, 1, 65535, Messages.get("config.max_retry"));
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, 24, 1, 65535, Messages.get("config.max_download_session"));
-        alwaysShowConfigGUI = forgeConfig.getBoolean("Always Show Config", categoryGeneral, false, Messages.get("config.always_show_config"));
         localPackPath = forgeConfig.getString("Local MMC Pack Path", categoryGeneral, "", Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString("Class Path", categoryGeneral, "", Messages.get("config.class_path"));
         disableUpdateToast = forgeConfig.getBoolean("Disable Update Toast", categoryGeneral, false, Messages.get("config.disable_update_toast"));
 
-        if (forgeConfig.getCategory(categoryGeneral).containsKey("Use Mirror")) {
-            forgeConfig.getCategory(categoryGeneral).remove("Use Mirror");
-            forgeConfig.save();
-        }
-        
         if (forgeConfig.hasChanged()) {
             forgeConfig.save();
         }
@@ -61,7 +93,7 @@ public class Config {
     public static void save() {
         FileUtils.deleteQuietly(configFile);
         forgeConfig = new Configuration(configFile);
-        showConfigGUI = forgeConfig.getBoolean("Show Config", categoryGeneral, showConfigGUI, Messages.get("config.show_config_gui"));
+        showConfigMode = ShowConfigMode.parse(forgeConfig.getString("Show Config", categoryGeneral, showConfigMode.name(), Messages.get("config.show_config"), ShowConfigMode.names()));
         useLocalPack = forgeConfig.getBoolean("Use Local MMC Pack", categoryGeneral, useLocalPack, Messages.get("config.use_local_pack"));
         proxyAddr = forgeConfig.getString("Proxy Address", categoryGeneral, proxyAddr, Messages.get("config.proxy_addr"));
         proxyPort = forgeConfig.getInt("Proxy Port", categoryGeneral, proxyPort, 0, 65535, Messages.get("config.proxy_port"));
@@ -71,7 +103,6 @@ public class Config {
         libraryPath = forgeConfig.getString("Library Path", categoryGeneral, libraryPath, Messages.get("config.library_path"));
         maxRetry = forgeConfig.getInt("Maximum Retry", categoryGeneral, maxRetry, 1, 65535, Messages.get("config.max_retry"));
         maxDownloadSession = forgeConfig.getInt("Maximum Session", categoryGeneral, maxDownloadSession, 1, 65535, Messages.get("config.max_download_session"));
-        alwaysShowConfigGUI = forgeConfig.getBoolean("Always Show Config", categoryGeneral, alwaysShowConfigGUI, Messages.get("config.always_show_config"));
         localPackPath = forgeConfig.getString("Local MMC Pack Path", categoryGeneral, localPackPath, Messages.get("config.local_pack_path"));
         classPath = forgeConfig.getString("Class Path", categoryGeneral, classPath, Messages.get("config.class_path"));
         disableUpdateToast = forgeConfig.getBoolean("Disable Update Toast", categoryGeneral, disableUpdateToast, Messages.get("config.disable_update_toast"));

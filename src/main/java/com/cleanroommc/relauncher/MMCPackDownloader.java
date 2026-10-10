@@ -41,7 +41,7 @@ public class MMCPackDownloader {
             if (needDownload) {
                 Relauncher.LOGGER.info("Downloading MMC pack with version {}", version);
                 Initializer.setStatusText(Messages.get("status.downloading_mmc_pack", version));
-                String zipUrl = "https://repo.cleanroommc.com/releases/com/cleanroommc/cleanroom/" + version + "/cleanroom-" + version + ".zip";
+                String zipUrl = CleanroomVersionParser.getPackUrl(version);
                 String sha1 = fetchSha1(zipUrl + ".sha1");
                 List<DownloadEntry> list = new ArrayList<>(1);
                 list.add(new DownloadEntry(new URL(zipUrl), pack, sha1));
